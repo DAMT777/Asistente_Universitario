@@ -1,0 +1,18 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+
+# Secretos y llaves (nunca al repositorio)
+infra/keys/
+.env
+*.pfx
+*.pem
+
+# Frontend
+node_modules/
+dist/

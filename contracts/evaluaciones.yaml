@@ -1,0 +1,287 @@
+# Contrato del servicio de Evaluaciones y cursos (fuente de verdad), parte del rol ESTUDIANTE.
+# Las pruebas de contrato leen este archivo con un lector YAML mínimo: usar solo mapas y listas en bloque,
+# listas en línea [a, b] y textos de una línea (entre comillas si llevan ": " o "#").
+openapi: 3.1.0
+info:
+  title: Servicio de evaluaciones y cursos
+  version: 1.0.0
+  description: "CU-15 y CU-16 del rol ESTUDIANTE, más la consulta interna que usa Entregas. Expuesto por el API Gateway (5000); el servicio escucha en 5002."
+servers:
+  - url: http://localhost:5000
+    description: API Gateway (local)
+security:
+  - bearerAuth: []
+tags:
+  - name: MisNotas
+    description: "Solo calificaciones PUBLICADAS. Un borrador o una actividad sin calificar se muestran como SIN_CALIFICAR con nota null; sin calificar no es 0."
+  - name: Interno
+    description: "Servicio a servicio. Requiere X-Service-Key y el API Gateway bloquea /internal/**."
+  - name: Salud
+paths:
+  /mis-notas:
+    get:
+      operationId: obtenerMatrizNotas
+      summary: "CU-16. Matriz de notas con cortes y definitiva parcial de los cursos del estudiante."
+      description: "La nota de cada corte sale de PublicacionCorte (última versión). Un corte sin publicar va con nota null y publicado false (RN-14). definitivaParcial = suma de nota x pesoCorte / 100 solo sobre cortes publicados; 0.0 si no hay ninguno. Valores redondeados a 1 decimal al presentar (DA-01)."
+      tags: [MisNotas]
+      responses:
+        "200":
+          description: Matriz de notas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatrizNotas"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+  /mis-notas/cursos/{cursoId}/actividades:
+    get:
+      operationId: obtenerNotasActividades
+      summary: "CU-15. Nota y retroalimentación de cada actividad del curso."
+      tags: [MisNotas]
+      parameters:
+        - name: cursoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Actividades del curso con su nota publicada o SIN_CALIFICAR.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotasActividades"
+        "400":
+          $ref: "#/components/responses/ValidacionFallida"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+  /internal/actividades/{actividadId}:
+    get:
+      operationId: obtenerActividadInterna
+      summary: Datos de la actividad para validar una entrega (solo Entregas).
+      tags: [Interno]
+      x-internal: true
+      security:
+        - serviceKey: []
+      parameters:
+        - name: actividadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: estudianteId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Actividad encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActividadInterna"
+        "400":
+          $ref: "#/components/responses/ValidacionFallida"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+  /health/live:
+    get:
+      operationId: saludLive
+      summary: El proceso responde.
+      tags: [Salud]
+      security: []
+      responses:
+        "200":
+          description: Vivo.
+  /health/ready:
+    get:
+      operationId: saludReady
+      summary: La base de datos responde.
+      tags: [Salud]
+      security: []
+      responses:
+        "200":
+          description: Listo.
+        "503":
+          description: La base de datos no responde.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT RS256 emitido por Usuarios (iss=unillanos-usuarios, aud=unillanos-notas). Rol requerido ESTUDIANTE."
+    serviceKey:
+      type: apiKey
+      in: header
+      name: X-Service-Key
+  schemas:
+    MatrizNotas:
+      type: object
+      additionalProperties: false
+      required: [cursos]
+      properties:
+        cursos:
+          type: array
+          items:
+            $ref: "#/components/schemas/CursoMatriz"
+    CursoMatriz:
+      type: object
+      additionalProperties: false
+      required: [cursoId, codigo, nombre, profesor, cortes, definitivaParcial, esParcial]
+      properties:
+        cursoId:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        nombre:
+          type: string
+        profesor:
+          type: string
+        cortes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CorteMatriz"
+        definitivaParcial:
+          type: number
+          minimum: 0
+          maximum: 5
+        esParcial:
+          type: boolean
+    CorteMatriz:
+      type: object
+      additionalProperties: false
+      required: [corte, pesoCorte, nota, publicado]
+      properties:
+        corte:
+          type: integer
+          minimum: 1
+          maximum: 3
+        pesoCorte:
+          type: number
+          minimum: 0
+          maximum: 100
+        nota:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 5
+          description: Nota publicada del corte; null si no se ha publicado (nunca 0).
+        publicado:
+          type: boolean
+    NotasActividades:
+      type: object
+      additionalProperties: false
+      required: [cursoId, actividades]
+      properties:
+        cursoId:
+          type: string
+          format: uuid
+        actividades:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotaActividad"
+    NotaActividad:
+      type: object
+      additionalProperties: false
+      required: [actividadId, titulo, corte, peso, fechaLimite, estado, nota, retroalimentacion]
+      properties:
+        actividadId:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+        corte:
+          type: integer
+          minimum: 1
+          maximum: 3
+        peso:
+          type: number
+          minimum: 0
+          maximum: 100
+        fechaLimite:
+          type: string
+          format: date-time
+        estado:
+          type: string
+          enum: [PUBLICADA, SIN_CALIFICAR]
+        nota:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 5
+        retroalimentacion:
+          type: [string, "null"]
+    ActividadInterna:
+      type: object
+      additionalProperties: false
+      required: [actividadId, cursoId, profesorId, fechaLimite, requiereEntrega, estudianteInscrito]
+      properties:
+        actividadId:
+          type: string
+          format: uuid
+        cursoId:
+          type: string
+          format: uuid
+        profesorId:
+          type: string
+          format: uuid
+        fechaLimite:
+          type: string
+          format: date-time
+          description: UTC, ISO 8601.
+        requiereEntrega:
+          type: boolean
+        estudianteInscrito:
+          type: boolean
+    Error:
+      type: object
+      additionalProperties: false
+      required: [status, codigo, mensaje, traceId]
+      properties:
+        status:
+          type: integer
+        codigo:
+          type: string
+          description: "Código estable. VALIDACION_FALLIDA, NO_AUTENTICADO, TOKEN_EXPIRADO, SIN_PERMISO, NO_ENCONTRADO."
+        mensaje:
+          type: string
+        traceId:
+          type: string
+          description: Igual al encabezado X-Correlation-Id de la respuesta.
+  responses:
+    ValidacionFallida:
+      description: VALIDACION_FALLIDA.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NoAutenticado:
+      description: "NO_AUTENTICADO o TOKEN_EXPIRADO (en /internal, falta o es inválida X-Service-Key)."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    SinPermiso:
+      description: "SIN_PERMISO. El rol no es ESTUDIANTE o el estudiante no está inscrito en el curso (RN-16)."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NoEncontrado:
+      description: NO_ENCONTRADO. El curso o la actividad no existe.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"

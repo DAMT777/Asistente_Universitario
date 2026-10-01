@@ -1,0 +1,290 @@
+# Contrato del servicio de Entregas (fuente de verdad).
+# Las pruebas de contrato leen este archivo con un lector YAML mínimo: usar solo mapas y listas en bloque,
+# listas en línea [a, b] y textos de una línea (entre comillas si llevan ": " o "#").
+openapi: 3.1.0
+info:
+  title: Servicio de entregas
+  version: 1.0.0
+  description: "CU-13 y CU-14 del rol ESTUDIANTE. Expuesto a través del API Gateway (puerto 5000); el servicio escucha en 5003."
+servers:
+  - url: http://localhost:5000
+    description: API Gateway (local)
+security:
+  - bearerAuth: []
+tags:
+  - name: Entregas
+    description: Entregas del estudiante sobre actividades con RequiereEntrega = true.
+  - name: Salud
+paths:
+  /actividades/{actividadId}/entregas:
+    post:
+      operationId: subirEntrega
+      summary: "CU-13. Sube la entrega de una actividad antes de su fecha límite."
+      description: "RN-04, RN-05, RN-07, RN-16. Si ya existe una entrega del estudiante para la actividad (enviada o anulada) se reutiliza la misma fila y se reemplaza el archivo."
+      tags: [Entregas]
+      parameters:
+        - $ref: "#/components/parameters/ActividadId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ArchivoEntrega"
+      responses:
+        "201":
+          description: Entrega registrada en estado ENVIADA.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entrega"
+        "400":
+          $ref: "#/components/responses/ValidacionFallida"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "413":
+          $ref: "#/components/responses/ArchivoDemasiadoGrande"
+        "415":
+          $ref: "#/components/responses/TipoArchivoNoPermitido"
+        "422":
+          $ref: "#/components/responses/ReglaIncumplida"
+        "503":
+          $ref: "#/components/responses/ServicioNoDisponible"
+  /entregas/{entregaId}:
+    put:
+      operationId: editarEntrega
+      summary: "CU-14. Reemplaza el archivo de la entrega mientras no venza la fecha límite."
+      description: "RN-06, RN-07. Actualiza fechaEnvio, nombreArchivo y tamano. Una entrega ajena responde 404."
+      tags: [Entregas]
+      parameters:
+        - $ref: "#/components/parameters/EntregaId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ArchivoEntrega"
+      responses:
+        "200":
+          description: Entrega actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entrega"
+        "400":
+          $ref: "#/components/responses/ValidacionFallida"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "413":
+          $ref: "#/components/responses/ArchivoDemasiadoGrande"
+        "415":
+          $ref: "#/components/responses/TipoArchivoNoPermitido"
+        "422":
+          $ref: "#/components/responses/ReglaIncumplida"
+        "503":
+          $ref: "#/components/responses/ServicioNoDisponible"
+    delete:
+      operationId: anularEntrega
+      summary: "CU-14. Anula la entrega mientras no venza la fecha límite."
+      description: "RN-06. Cambia el estado a ANULADA; la fila se conserva."
+      tags: [Entregas]
+      parameters:
+        - $ref: "#/components/parameters/EntregaId"
+      responses:
+        "200":
+          description: Entrega en estado ANULADA.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entrega"
+        "400":
+          $ref: "#/components/responses/ValidacionFallida"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "422":
+          $ref: "#/components/responses/ReglaIncumplida"
+        "503":
+          $ref: "#/components/responses/ServicioNoDisponible"
+  /mis-entregas:
+    get:
+      operationId: listarMisEntregas
+      summary: Entregas propias del estudiante autenticado.
+      tags: [Entregas]
+      parameters:
+        - name: actividadId
+          in: query
+          required: false
+          description: Filtra por actividad.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Lista de entregas propias (enviadas y anuladas), de la más reciente a la más antigua.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Entrega"
+        "400":
+          $ref: "#/components/responses/ValidacionFallida"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+  /health/live:
+    get:
+      operationId: saludLive
+      summary: El proceso responde.
+      tags: [Salud]
+      security: []
+      responses:
+        "200":
+          description: Vivo.
+  /health/ready:
+    get:
+      operationId: saludReady
+      summary: La base de datos y Blob Storage responden.
+      tags: [Salud]
+      security: []
+      responses:
+        "200":
+          description: Listo.
+        "503":
+          description: Alguna dependencia no responde.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT RS256 emitido por Usuarios (iss=unillanos-usuarios, aud=unillanos-notas). Rol requerido ESTUDIANTE."
+  parameters:
+    ActividadId:
+      name: actividadId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EntregaId:
+      name: entregaId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    ArchivoEntrega:
+      type: object
+      required: [archivo]
+      properties:
+        archivo:
+          type: string
+          format: binary
+          description: "PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ZIP, PNG o JPG. Se valida extensión y firma del contenido. Máximo Entregas__MaxBytes (20 MB por defecto)."
+    Entrega:
+      type: object
+      additionalProperties: false
+      required: [id, actividadId, estudianteId, fechaEnvio, estado, nombreArchivo, tamano]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actividadId:
+          type: string
+          format: uuid
+        estudianteId:
+          type: string
+          format: uuid
+        fechaEnvio:
+          type: string
+          format: date-time
+          description: UTC, ISO 8601.
+        estado:
+          type: string
+          enum: [ENVIADA, ANULADA]
+        nombreArchivo:
+          type: string
+          maxLength: 255
+          description: Nombre original; solo metadato. El blob se guarda con una ruta basada en GUID.
+        tamano:
+          type: integer
+          format: int64
+          minimum: 1
+    Error:
+      type: object
+      additionalProperties: false
+      required: [status, codigo, mensaje, traceId]
+      properties:
+        status:
+          type: integer
+        codigo:
+          type: string
+          description: "Código estable. VALIDACION_FALLIDA, NO_AUTENTICADO, TOKEN_EXPIRADO, SIN_PERMISO, NO_ENCONTRADO, ARCHIVO_DEMASIADO_GRANDE, TIPO_ARCHIVO_NO_PERMITIDO, FECHA_LIMITE_VENCIDA, ACTIVIDAD_SIN_ENTREGA, SERVICIO_NO_DISPONIBLE."
+        mensaje:
+          type: string
+        traceId:
+          type: string
+          description: Igual al encabezado X-Correlation-Id de la respuesta.
+  responses:
+    ValidacionFallida:
+      description: VALIDACION_FALLIDA. Falta el archivo, está vacío o un parámetro no es válido.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NoAutenticado:
+      description: NO_AUTENTICADO o TOKEN_EXPIRADO.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    SinPermiso:
+      description: "SIN_PERMISO. El rol no es ESTUDIANTE o el estudiante no está inscrito en el curso (RN-16)."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NoEncontrado:
+      description: "NO_ENCONTRADO. La actividad no existe o la entrega no existe o es de otro estudiante (RN-16)."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ArchivoDemasiadoGrande:
+      description: ARCHIVO_DEMASIADO_GRANDE.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TipoArchivoNoPermitido:
+      description: TIPO_ARCHIVO_NO_PERMITIDO. Extensión no permitida o el contenido no corresponde a la extensión.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ReglaIncumplida:
+      description: "FECHA_LIMITE_VENCIDA (RN-05, RN-06) o ACTIVIDAD_SIN_ENTREGA (RN-04)."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ServicioNoDisponible:
+      description: SERVICIO_NO_DISPONIBLE. Evaluaciones no respondió en 3 segundos o falló.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"

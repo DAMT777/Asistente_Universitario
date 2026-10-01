@@ -1,0 +1,29 @@
+<Solution>
+  <Folder Name="/services/" />
+  <Folder Name="/services/compartido/">
+    <Project Path="services/compartido/Unillanos.Pruebas.Compartidas/Unillanos.Pruebas.Compartidas.csproj" />
+    <Project Path="services/compartido/Unillanos.ServiceDefaults/Unillanos.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/services/entregas/" />
+  <Folder Name="/services/entregas/src/">
+    <Project Path="services/entregas/src/Unillanos.Entregas.Api/Unillanos.Entregas.Api.csproj" />
+    <Project Path="services/entregas/src/Unillanos.Entregas.Application/Unillanos.Entregas.Application.csproj" />
+    <Project Path="services/entregas/src/Unillanos.Entregas.Domain/Unillanos.Entregas.Domain.csproj" />
+    <Project Path="services/entregas/src/Unillanos.Entregas.Infrastructure/Unillanos.Entregas.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/entregas/tests/">
+    <Project Path="services/entregas/tests/Unillanos.Entregas.IntegrationTests/Unillanos.Entregas.IntegrationTests.csproj" />
+    <Project Path="services/entregas/tests/Unillanos.Entregas.UnitTests/Unillanos.Entregas.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/services/evaluaciones/" />
+  <Folder Name="/services/evaluaciones/src/">
+    <Project Path="services/evaluaciones/src/Unillanos.Evaluaciones.Api/Unillanos.Evaluaciones.Api.csproj" />
+    <Project Path="services/evaluaciones/src/Unillanos.Evaluaciones.Application/Unillanos.Evaluaciones.Application.csproj" />
+    <Project Path="services/evaluaciones/src/Unillanos.Evaluaciones.Domain/Unillanos.Evaluaciones.Domain.csproj" />
+    <Project Path="services/evaluaciones/src/Unillanos.Evaluaciones.Infrastructure/Unillanos.Evaluaciones.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/evaluaciones/tests/">
+    <Project Path="services/evaluaciones/tests/Unillanos.Evaluaciones.IntegrationTests/Unillanos.Evaluaciones.IntegrationTests.csproj" />
+    <Project Path="services/evaluaciones/tests/Unillanos.Evaluaciones.UnitTests/Unillanos.Evaluaciones.UnitTests.csproj" />
+  </Folder>
+</Solution>
