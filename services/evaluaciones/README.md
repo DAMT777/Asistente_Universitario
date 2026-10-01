@@ -34,7 +34,7 @@ Sin Docker para el servicio (SQL Server ya arriba):
 export ConnectionStrings__Default="Server=localhost,1433;Database=evaluaciones_db;User Id=sa;Password=<clave>;TrustServerCertificate=True"
 export Jwt__PublicKeyPath="$PWD/infra/keys/jwt-publica.pem"
 export ServiceKey="<llave compartida>"
-dotnet run --project services/evaluaciones/src/Unillanos.Evaluaciones.Api
+dotnet run --project services/evaluaciones/src/Evaluaciones.Api
 ```
 
 ## Probarlo con curl
@@ -62,8 +62,8 @@ curl -s "http://localhost:5002/internal/actividades/d0000000-0000-0000-0000-0000
 ## Pruebas
 
 ```bash
-dotnet test services/evaluaciones/tests/Unillanos.Evaluaciones.UnitTests
-dotnet test services/evaluaciones/tests/Unillanos.Evaluaciones.IntegrationTests   # requiere Docker
+dotnet test services/evaluaciones/tests/Evaluaciones.UnitTests
+dotnet test services/evaluaciones/tests/Evaluaciones.IntegrationTests   # requiere Docker
 ```
 
 Las pruebas de integración usan SQL Server 2022 real (Testcontainers), cargan la semilla de Development y validan las respuestas contra `contracts/evaluaciones.yaml`.

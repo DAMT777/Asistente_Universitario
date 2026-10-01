@@ -15,10 +15,10 @@ Para cada subida, edición o anulación consulta a Evaluaciones (`GET /internal/
 
 ## Capas
 
-- `Unillanos.Entregas.Domain`: `Entrega`, `PlazoEntrega` (fecha límite inclusiva, en UTC), `PoliticaSubida`, `ValidadorArchivo` (extensión y firma). Sin dependencias.
-- `Unillanos.Entregas.Application`: casos de uso `SubirEntrega`, `EditarEntrega`, `AnularEntrega`, `ListarMisEntregas`; puertos `IEntregaRepositorio`, `IAlmacenArchivos`, `IEvaluacionesClient`.
-- `Unillanos.Entregas.Infrastructure`: EF Core (migraciones en `Persistencia/Migraciones`), `BlobAlmacenArchivos` y `EvaluacionesHttpClient`.
-- `Unillanos.Entregas.Api`: controlador delgado y composición. Los errores se traducen en `services/compartido/Unillanos.ServiceDefaults`.
+- `Entregas.Domain`: `Entrega`, `PlazoEntrega` (fecha límite inclusiva, en UTC), `PoliticaSubida`, `ValidadorArchivo` (extensión y firma). Sin dependencias.
+- `Entregas.Application`: casos de uso `SubirEntrega`, `EditarEntrega`, `AnularEntrega`, `ListarMisEntregas`; puertos `IEntregaRepositorio`, `IAlmacenArchivos`, `IEvaluacionesClient`.
+- `Entregas.Infrastructure`: EF Core (migraciones en `Persistencia/Migraciones`), `BlobAlmacenArchivos` y `EvaluacionesHttpClient`.
+- `Entregas.Api`: controlador delgado y composición. Los errores se traducen en `services/compartido/Unillanos.ServiceDefaults`.
 
 ## Variables de entorno
 
@@ -55,7 +55,7 @@ export Jwt__PublicKeyPath="$PWD/infra/keys/jwt-publica.pem"
 export ServiceKey="<la misma de Evaluaciones>"
 export Services__EvaluacionesBaseUrl="http://localhost:5002"
 export Storage__ConnectionString="UseDevelopmentStorage=true"
-dotnet run --project services/entregas/src/Unillanos.Entregas.Api
+dotnet run --project services/entregas/src/Entregas.Api
 ```
 
 ## Probarlo con curl
@@ -85,8 +85,8 @@ Otros tokens: `generar-token.sh luis|marta|pedro|profesor`, `--expirado` y `--mi
 ## Pruebas
 
 ```bash
-dotnet test services/entregas/tests/Unillanos.Entregas.UnitTests
-dotnet test services/entregas/tests/Unillanos.Entregas.IntegrationTests   # requiere Docker
+dotnet test services/entregas/tests/Entregas.UnitTests
+dotnet test services/entregas/tests/Entregas.IntegrationTests   # requiere Docker
 ```
 
 Las pruebas de integración levantan SQL Server 2022 real y Azurite con Testcontainers, usan WireMock para simular Evaluaciones (timeout, caída, 500) y validan las respuestas contra `contracts/entregas.yaml`.

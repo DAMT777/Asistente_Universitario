@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
-  <ItemGroup>
-    <ProjectReference Include="..\Unillanos.Entregas.Infrastructure\Unillanos.Entregas.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\..\compartido\Unillanos.ServiceDefaults\Unillanos.ServiceDefaults.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
-  </ItemGroup>
-</Project>

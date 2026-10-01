@@ -1,18 +1,29 @@
 # .NET
 bin/
 obj/
-*.user
-*.suo
-.vs/
 TestResults/
 *.trx
+coverage*/
+*.coverage
+*.user
+*.suo
+*.DotSettings.user
+
+# IDE y sistema operativo
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 
 # Secretos y llaves (nunca al repositorio)
 infra/keys/
 .env
+.env.*
+!.env.example
 *.pfx
 *.pem
 
-# Frontend
+# Frontend (web/)
 node_modules/
 dist/

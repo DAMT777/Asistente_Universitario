@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Entregas.Api\Entregas.Api.csproj" />
+    <ProjectReference Include="..\..\..\compartido\Unillanos.Pruebas.Compartidas\Unillanos.Pruebas.Compartidas.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.Azurite" />
+    <PackageReference Include="WireMock.Net" />
+  </ItemGroup>
+</Project>
