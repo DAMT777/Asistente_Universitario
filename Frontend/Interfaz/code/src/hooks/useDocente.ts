@@ -15,6 +15,8 @@ export function usePendientesDocente() {
   const califs = useQueries({ queries: ids.map((id) => ({ queryKey: qk.califsCurso(id), queryFn: () => api.calificaciones.porCurso(id) })) });
   const ests = useQueries({ queries: ids.map((id) => ({ queryKey: qk.estudiantes(id), queryFn: () => api.cursos.estudiantes(id) })) });
   const listo = !!acts.data && califs.every((q) => q.data) && ests.every((q) => q.data);
+  // Un error en cualquiera de las consultas detiene la carga (antes quedaba "cargando" para siempre).
+  const error = cursos.error ?? acts.error ?? califs.find((q) => q.error)?.error ?? ests.find((q) => q.error)?.error ?? null;
 
   const data = useMemo(() => {
     if (!listo || !cursos.data) return undefined;
@@ -28,7 +30,13 @@ export function usePendientesDocente() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listo, cursos.data, acts.data, ...califs.map((q) => q.data), ...ests.map((q) => q.data)]);
 
-  return { data, totalSinCalificar: data?.reduce((a, x) => a + x.conteo.sinCalificar, 0) ?? 0, isLoading: !listo };
+  return {
+    data,
+    totalSinCalificar: data?.reduce((a, x) => a + x.conteo.sinCalificar, 0) ?? 0,
+    isLoading: !listo && !error,
+    error,
+    refetch: () => Promise.all([cursos.refetch(), acts.refetch(), ...califs.map((q) => q.refetch()), ...ests.map((q) => q.refetch())]),
+  };
 }
 
 export function useCrearActividad(cursoId: string) {

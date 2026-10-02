@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createHttpApi, createMockApi } from '@/api';
+import { ApiError, createHttpApi, createMockApi } from '@/api';
 import { ApiProvider, SesionProvider, type AlmacenSesion } from '@/hooks';
 import { ToastProvider } from '@/ui/Toast';
 
@@ -25,8 +25,17 @@ function almacenMemoria(): AlmacenSesion {
   return { leer: async () => v, guardar: async (x) => { v = x; }, borrar: async () => { v = null; } };
 }
 
+/**
+ * Un reintento solo para fallas que pueden ser pasajeras (sin conexión, 5xx).
+ * Las respuestas definitivas (401, 403, 404, 422, 501 NO_IMPLEMENTADO…) se muestran de inmediato.
+ */
+function reintentar(fallos: number, error: unknown): boolean {
+  if (error instanceof ApiError && error.status !== 0 && (error.status < 500 || error.status === 501)) return false;
+  return fallos < 1;
+}
+
 export function Providers({ children }: { children: ReactNode }) {
-  const [qc] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } } }));
+  const [qc] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: reintentar, refetchOnWindowFocus: false } } }));
   const entorno = useMemo(() => {
     if (API_URL) {
       return { api: createHttpApi({ baseUrl: API_URL, getToken: () => JSON.parse(localStorage.getItem(CLAVE) ?? 'null')?.token ?? null }), hoy: undefined, almacen: almacenLocal, demo: DEMO_BACKEND };

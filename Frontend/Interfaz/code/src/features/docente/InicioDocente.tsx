@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useCursos, useActividades, usePendientesDocente, useUsuario } from '@/hooks';
 import { colors, font } from '@/theme/tokens';
-import { BarraCortes, Cargando, Chevron, Fila, Monograma, Panel, Tarjeta, TituloPagina, Vacio, entrada } from '@/ui';
+import { BarraCortes, Cargando, Chevron, ErrorEstado, Fila, Monograma, Panel, Tarjeta, TituloPagina, Vacio, entrada } from '@/ui';
 import { codigoCurso, useLayout } from '../cursos/compartido';
 
 export function InicioDocente() {
@@ -9,7 +9,6 @@ export function InicioDocente() {
   const u = useUsuario();
   const nav = useNavigate();
   const p = usePendientesDocente();
-  const cursos = useCursos();
 
   return (
     <>
@@ -19,14 +18,14 @@ export function InicioDocente() {
           <span style={{ fontSize: 16, color: colors.textoMedio }}>Esto es lo que tienes pendiente en tus cursos.</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, paddingLeft: 20, borderLeft: '1px solid rgba(255,255,255,0.14)' }}>
-          <span style={{ fontSize: 40, fontWeight: 300, lineHeight: 1 }}>{p.totalSinCalificar}</span>
+          <span style={{ fontSize: 40, fontWeight: 300, lineHeight: 1 }}>{p.error ? '—' : p.totalSinCalificar}</span>
           <span style={{ fontSize: 13, color: colors.textoTenue }}>entregas por calificar</span>
         </div>
       </div>
 
       <Panel indice={1}>
         <h2 style={{ margin: 0, fontSize: 19, fontWeight: 600 }}>Por calificar</h2>
-        {p.isLoading ? <Cargando /> : p.data!.length === 0 ? <Vacio>No hay entregas pendientes.</Vacio> : p.data!.map(({ curso, actividad, conteo }) => (
+        {p.error ? <ErrorEstado error={p.error} onReintentar={p.refetch} /> : p.isLoading ? <Cargando /> : p.data!.length === 0 ? <Vacio>No hay entregas pendientes.</Vacio> : p.data!.map(({ curso, actividad, conteo }) => (
           <Fila key={actividad.id} onClick={() => nav(`/d/cursos/${curso.id}?tab=calificar&actividad=${actividad.id}`)}>
             <Monograma texto={curso.monograma} acento={curso.acento} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -44,7 +43,7 @@ export function InicioDocente() {
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <h2 style={{ margin: 0, fontSize: 19, fontWeight: 600 }}>Mis cursos</h2>
-        {cursos.isLoading ? <Cargando /> : <GrillaCursosDocente />}
+        <GrillaCursosDocente />
       </section>
     </>
   );
@@ -54,8 +53,13 @@ const pill = (bg: string, fg: string) => ({ display: 'inline-flex', alignItems: 
 
 function GrillaCursosDocente() {
   const nav = useNavigate();
-  const cursos = useCursos().data ?? [];
+  const q = useCursos();
   const acts = useActividades().data ?? [];
+  if (q.error) return <ErrorEstado error={q.error} onReintentar={q.refetch} />;
+  // Sin datos ni error la consulta sigue pendiente (también cuando un reintento está en pausa).
+  if (!q.data) return <Cargando />;
+  const cursos = q.data;
+  if (cursos.length === 0) return <Vacio>No tienes cursos asignados.</Vacio>;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(270px,1fr))', gap: 16 }}>
       {cursos.map((c, i) => (
