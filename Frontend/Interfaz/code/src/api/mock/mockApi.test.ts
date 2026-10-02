@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createMockApi } from './mockApi';
 
-const docente = { usuario: 'lrincon', contrasena: 'demo123', rol: 'docente' as const };
-const estudiante = { usuario: '160005017', contrasena: 'demo123', rol: 'estudiante' as const };
+const docente = { usuario: 'lrincon', contrasena: 'demo123' };
+const estudiante = { usuario: '160005017', contrasena: 'demo123' };
 const nuevo = () => createMockApi({ hoy: () => '2026-10-01T17:00:00Z', latenciaMs: 0 });
 const corte2 = { cursoId: 'sim', estudianteId: 'e1', corte: 2 as const, omitirBorradores: false, corregir: false };
 

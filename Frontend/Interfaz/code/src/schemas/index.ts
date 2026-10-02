@@ -4,7 +4,6 @@ import { NOTA_MAX, NOTA_MIN } from '@/domain/reglas';
 export const loginSchema = z.object({
   usuario: z.string().trim().min(1, 'Escribe tu usuario.'),
   contrasena: z.string().min(6, 'La contraseña tiene al menos 6 caracteres.'),
-  rol: z.enum(['estudiante', 'docente']),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 

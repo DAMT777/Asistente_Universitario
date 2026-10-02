@@ -1,4 +1,4 @@
-import type { Actividad, ArchivoEntrega, Calificacion, Corte, Curso, PublicacionCorte, Rol, Sesion, Usuario } from '@/types';
+import type { Actividad, ArchivoEntrega, Calificacion, Corte, Curso, PublicacionCorte, Sesion, Usuario } from '@/types';
 
 /**
  * Contrato único que consumen los hooks. Hay dos implementaciones:
@@ -11,7 +11,8 @@ export interface ApiClient {
     publicar(input: { cursoId: string; estudianteId: string; corte: Corte; omitirBorradores: boolean; corregir: boolean }): Promise<PublicacionCorte>;
   };
   auth: {
-    login(input: { usuario: string; contrasena: string; rol: Rol }): Promise<Sesion>;
+    /** El rol no se elige: lo decide el servicio de usuarios según la cuenta. */
+    login(input: { usuario: string; contrasena: string }): Promise<Sesion>;
     logout(): Promise<void>;
   };
   cursos: {

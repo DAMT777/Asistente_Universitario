@@ -21,7 +21,7 @@ export function fechaFormulario(valor: string): string {
 }
 
 export function diaMes(iso: string): { dia: string; mes: string } {
-  if (!iso) return { dia: '—', mes: 'SIN FECHA' };
+  if (!iso) return { dia: '—', mes: '' };
   const partes = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'numeric' }).formatToParts(new Date(iso));
   return { dia: partes.find(p => p.type === 'day')!.value, mes: MESES[Number(partes.find(p => p.type === 'month')!.value) - 1].toUpperCase() };
 }

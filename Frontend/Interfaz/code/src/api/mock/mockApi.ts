@@ -55,8 +55,9 @@ export function createMockApi(cfg: MockConfig): ApiClient {
       },
     },
     auth: {
-      async login({ usuario: u, rol }) {
-        const encontrado = rol === 'docente' ? (u === DOCENTE.codigo ? DOCENTE : null) : ESTUDIANTES.find((e) => e.codigo === u) ?? null;
+      async login({ usuario: u }) {
+        // Como el servicio real: el rol sale de la cuenta, no de lo que elija la persona.
+        const encontrado = [DOCENTE, ...ESTUDIANTES].find((x) => x.codigo === u) ?? null;
         if (!encontrado) throw new ApiError(401, 'Usuario o contraseña incorrectos.');
         usuario = encontrado;
         return espera<Sesion>({ token: `mock-${encontrado.id}`, usuario: encontrado });

@@ -51,9 +51,9 @@ export function FechaTile({ fecha, grande }: { fecha: string; grande?: boolean }
   const { dia, mes } = diaMes(fecha);
   const s = grande ? 60 : 48;
   return (
-    <div style={{ width: s, height: s, flex: 'none', borderRadius: 11, background: colors.fondoProfundo, border: `1px solid ${colors.linea}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+    <div aria-label={fecha ? undefined : 'Sin fecha límite'} style={{ width: s, height: s, flex: 'none', borderRadius: 11, background: colors.fondoProfundo, border: `1px solid ${colors.linea}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
       <span style={{ fontSize: grande ? 22 : 18, fontWeight: font.weight.bold }}>{dia}</span>
-      <span style={{ fontSize: font.size.xxs, fontWeight: font.weight.semibold, letterSpacing: '0.08em', color: colors.textoTenue, marginTop: 3 }}>{mes}</span>
+      {mes && <span style={{ fontSize: font.size.xxs, fontWeight: font.weight.semibold, letterSpacing: '0.08em', color: colors.textoTenue, marginTop: 3 }}>{mes}</span>}
     </div>
   );
 }

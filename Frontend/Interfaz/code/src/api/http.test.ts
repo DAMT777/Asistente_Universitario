@@ -8,7 +8,7 @@ describe('adaptador de los contratos de la guía técnica', () => {
   it('adapta login y usa el rol devuelto por el servicio', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(respuesta({ accessToken: 'token', usuario: { id: 'p1', nombre: 'Profesora', rol: 'PROFESOR' } }));
     const api = createHttpApi({ baseUrl: '/api', getToken: () => null, fetchImpl });
-    const sesion = await api.auth.login({ usuario: 'P0001', contrasena: 'Demo1234!', rol: 'estudiante' });
+    const sesion = await api.auth.login({ usuario: 'P0001', contrasena: 'Demo1234!' });
     expect(sesion.usuario.rol).toBe('docente');
     expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ usuario: 'P0001', password: 'Demo1234!' });
   });
@@ -100,7 +100,7 @@ describe('adaptador de los contratos de la guía técnica', () => {
     const vencida = vi.fn();
     const fetchImpl = vi.fn().mockImplementation(async () => respuesta({ status: 401, codigo: 'TOKEN_EXPIRADO', mensaje: 'El token expiró. Inicia sesión de nuevo.' }, 401));
     const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl, onSesionVencida: vencida });
-    await expect(api.auth.login({ usuario: 'P0001', contrasena: 'mala123', rol: 'docente' })).rejects.toThrow();
+    await expect(api.auth.login({ usuario: 'P0001', contrasena: 'mala123' })).rejects.toThrow();
     expect(vencida).not.toHaveBeenCalled();
     await expect(api.cursos.listar()).rejects.toThrow('expiró');
     expect(vencida).toHaveBeenCalledTimes(1);
