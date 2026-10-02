@@ -27,10 +27,10 @@ export function CalificarTab({ cursoId, actividadId, onElegir }: { cursoId: stri
     if (!errores) toast(f.calificacion?.estado === 'publicada' ? 'Nota modificada · queda en borrador hasta publicarla' : 'Borrador guardado');
     return errores?.nota ?? errores?.retro ?? errores?._ ?? null;
   }
-  const filas = (cal.filas ?? []).filter(f => `${f.estudiante.nombre} ${f.estudiante.codigo}`.toLowerCase().includes(busqueda.toLowerCase()) && (filtro === 'todos' || (filtro === 'sin_calificar' ? !f.calificacion?.estado : f.calificacion?.estado === filtro)));
+  const filas = (cal.filas ?? []).filter(f => `${f.estudiante.nombre} ${f.estudiante.codigo}`.toLowerCase().includes(busqueda.toLowerCase()) && (filtro === 'todos' || (filtro === 'con_entrega' ? !!f.calificacion?.entregado : filtro === 'sin_entrega' ? !f.calificacion?.entregado : filtro === 'sin_calificar' ? !f.calificacion?.estado : f.calificacion?.estado === filtro)));
   return <>
     <label className="au-toolbar">Actividad
-      <select value={a.id} onChange={e => { onElegir(e.target.value); setError(null); }}>
+      <select value={a.id} onChange={e => { onElegir(e.target.value); setError(null); setFiltro('todos'); }}>
         {(cal.actividades ?? []).map(x => <option key={x.id} value={x.id}>Corte {x.corte} · {x.titulo}</option>)}
       </select>
     </label>
@@ -45,7 +45,7 @@ export function CalificarTab({ cursoId, actividadId, onElegir }: { cursoId: stri
     <p style={{ margin: 0, color: colors.textoMedio }}>Guardar deja la nota en borrador. Usa Publicar notas de actividad para mostrar al estudiante todos los borradores de la actividad. La nota del corte se publica por separado en Notas por corte.</p>
     <div className="au-toolbar">
       <input aria-label="Buscar estudiante para calificar" placeholder="Buscar por nombre o código" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-      <label>Estado <select value={filtro} onChange={e => setFiltro(e.target.value)}><option value="todos">Todos</option><option value="sin_calificar">Sin calificar</option><option value="borrador">Borradores</option><option value="publicada">Publicadas</option></select></label>
+      <label>Estado <select value={filtro} onChange={e => setFiltro(e.target.value)}><option value="todos">Todos</option><option value="sin_calificar">Sin calificar</option><option value="borrador">Borradores</option><option value="publicada">Publicadas</option>{a.requiereEntrega && <><option value="con_entrega">Con entrega</option><option value="sin_entrega">Sin entrega</option></>}</select></label>
     </div>
     {error && <p role="alert" style={{ color: colors.error }}>{error}</p>}
     {!filas.length ? <Vacio>No hay estudiantes que coincidan con estos filtros.</Vacio> : wide ? <div className="au-table-wrap"><table className="au-table"><caption>Calificaciones de {a.titulo}</caption><thead><tr><th>Estudiante y entrega</th><th>Estado</th><th>Nota y retroalimentación</th></tr></thead><tbody>{filas.map(f => <FilaEditor key={f.estudiante.id + a.id} fila={f} tabla requiereEntrega={a.requiereEntrega} vencida={vencida} onGuardar={(nota, retro) => guardarFila(f, nota, retro)} />)}</tbody></table></div> : <div className="au-grade-cards">{filas.map(f => <FilaEditor key={f.estudiante.id + a.id} fila={f} tabla={false} requiereEntrega={a.requiereEntrega} vencida={vencida} onGuardar={(nota, retro) => guardarFila(f, nota, retro)} />)}</div>}

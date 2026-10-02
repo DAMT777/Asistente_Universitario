@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import type { Rol } from '@/types';
 import { useSesion } from '@/hooks';
 import { Icono, icono, conOnda } from '@/ui';
@@ -40,6 +40,8 @@ export function LoginPage() {
   const usuarioRef = useRef<HTMLInputElement>(null);
   const contrasenaRef = useRef<HTMLInputElement>(null);
   const modoDemo = !import.meta.env.VITE_API_URL;
+  const [params] = useSearchParams();
+  const sesionVencida = params.get('sesion') === 'vencida';
 
   const volver = useCallback(() => {
     setPaso('seleccion');
@@ -117,6 +119,7 @@ export function LoginPage() {
               </button>
             ))}
             {modoDemo && <p className="au-login-nota au-item" style={orden(4)}>Demostración con datos semilla. Matrícula e integración con SIAU fuera del alcance. Contraseña de prueba: demo123.</p>}
+            {sesionVencida && <p role="status" className="au-login-nota au-item" style={orden(4)}>Tu sesión expiró o ya no es válida. Inicia sesión de nuevo para continuar.</p>}
           </div>
 
           {/* Paso 2: credenciales */}

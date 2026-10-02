@@ -96,4 +96,27 @@ describe('adaptador de los contratos de la guía técnica', () => {
     const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
     expect(await api.cortes.listar()).toEqual([{ cursoId: 'c1', estudianteId: 'e1', corte: 1, nota: 3.2, fechaPublicacion: '2026-10-01T12:00:00Z' }]);
   });
+  it('avisa que la sesión venció cuando un servicio responde 401, pero no por credenciales erradas (CU-01)', async () => {
+    const vencida = vi.fn();
+    const fetchImpl = vi.fn().mockImplementation(async () => respuesta({ status: 401, codigo: 'TOKEN_EXPIRADO', mensaje: 'El token expiró. Inicia sesión de nuevo.' }, 401));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl, onSesionVencida: vencida });
+    await expect(api.auth.login({ usuario: 'P0001', contrasena: 'mala123', rol: 'docente' })).rejects.toThrow();
+    expect(vencida).not.toHaveBeenCalled();
+    await expect(api.cursos.listar()).rejects.toThrow('expiró');
+    expect(vencida).toHaveBeenCalledTimes(1);
+  });
+  it('define pesos y crea actividades con los contratos de la guía (CU-02 y CU-03)', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(respuesta({ id: 'c1', pesoCorte1: 25, pesoCorte2: 35, pesoCorte3: 40 }))
+      .mockResolvedValueOnce(respuesta([]))
+      .mockResolvedValueOnce(respuesta({ id: 'a9', cursoId: 'c1', titulo: 'Taller 3', corte: 3, peso: 30, fechaLimite: '2026-12-16T04:59:00Z', requiereEntrega: true, vencida: false, estado: null }, 201));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    await api.cursos.actualizarPesos('c1', { cortes: [25, 35, 40], actividades: {} });
+    expect(fetchImpl.mock.calls[0][0]).toBe('/api/cursos/c1/pesos');
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ pesoCorte1: 25, pesoCorte2: 35, pesoCorte3: 40 });
+    const a = await api.actividades.crear({ cursoId: 'c1', titulo: 'Taller 3', corte: 3, peso: 30, vence: '2026-12-16T04:59:00.000Z', requiereEntrega: true });
+    expect(fetchImpl.mock.calls[2][0]).toBe('/api/cursos/c1/actividades');
+    expect(JSON.parse(fetchImpl.mock.calls[2][1].body)).toEqual({ titulo: 'Taller 3', corte: 3, peso: 30, fechaLimite: '2026-12-16T04:59:00.000Z', requiereEntrega: true });
+    expect(a).toMatchObject({ id: 'a9', vence: '2026-12-16T04:59:00Z' });
+  });
 });

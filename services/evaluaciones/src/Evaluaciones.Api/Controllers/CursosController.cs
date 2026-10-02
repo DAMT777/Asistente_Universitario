@@ -16,7 +16,10 @@ public sealed class CursosController(
     ListarEstudiantesDelCurso listarEstudiantes,
     ConsultarPonderado consultarPonderado,
     PublicarCorte publicarCorte,
-    CorregirCorte corregirCorte) : ControllerBase
+    CorregirCorte corregirCorte,
+    ObtenerCurso obtenerCurso,
+    DefinirPesosCortes definirPesos,
+    GestionarActividad gestionarActividad) : ControllerBase
 {
     /// <summary>Estudiantes inscritos en el curso. Apoyo de CU-09, CU-10 y CU-11.</summary>
     [HttpGet("{cursoId:guid}/estudiantes")]
@@ -28,6 +31,28 @@ public sealed class CursosController(
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CursoResumenDto>>> Listar(CancellationToken ct) =>
         Ok(await listarCursos.EjecutarAsync(User.ObtenerId(), User.ObtenerRol(), ct));
+
+    /// <summary>Detalle del curso con los pesos de los cortes. Profesor dueño o estudiante inscrito.</summary>
+    [HttpGet("{cursoId:guid}")]
+    public async Task<ActionResult<CursoResumenDto>> Obtener(Guid cursoId, CancellationToken ct) =>
+        Ok(await obtenerCurso.EjecutarAsync(User.ObtenerId(), User.ObtenerRol(), cursoId, ct));
+
+    /// <summary>CU-02. Define los pesos de los tres cortes. Deben sumar 100.</summary>
+    [HttpPut("{cursoId:guid}/pesos")]
+    [Authorize(Policy = Politicas.Profesor)]
+    public async Task<ActionResult<CursoResumenDto>> DefinirPesos(
+        Guid cursoId, [FromBody] SolicitudPesosCortes solicitud, CancellationToken ct) =>
+        Ok(await definirPesos.EjecutarAsync(User.ObtenerId(), cursoId, solicitud, ct));
+
+    /// <summary>CU-03. Crea una actividad en el curso.</summary>
+    [HttpPost("{cursoId:guid}/actividades")]
+    [Authorize(Policy = Politicas.Profesor)]
+    public async Task<ActionResult<ActividadDto>> CrearActividad(
+        Guid cursoId, [FromBody] SolicitudActividad solicitud, CancellationToken ct)
+    {
+        var creada = await gestionarActividad.CrearAsync(User.ObtenerId(), cursoId, solicitud, ct);
+        return Created($"/actividades/{creada.Id}", creada);
+    }
 
     /// <summary>CU-12. Actividades del curso. El estudiante ve su estado en cada una.</summary>
     [HttpGet("{cursoId:guid}/actividades")]

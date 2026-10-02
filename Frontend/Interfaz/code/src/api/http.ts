@@ -7,6 +7,8 @@ export interface HttpConfig {
   baseUrl: string;
   getToken: () => string | null | Promise<string | null>;
   fetchImpl?: typeof fetch;
+  /** CU-01: el token dura 60 minutos. Si un servicio responde 401, la sesión ya no sirve y hay que iniciarla de nuevo. */
+  onSesionVencida?: () => void;
 }
 
 // DTOs externos de la guía técnica; los hooks conservan sus modelos de vista.
@@ -31,6 +33,7 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
     const formulario = body instanceof FormData;
     const res = await f(cfg.baseUrl.replace(/\/$/, '') + path, { method, headers: { Accept: 'application/json', ...(formulario || body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : formulario ? body : JSON.stringify(body) });
     if (!res.ok) {
+      if (res.status === 401 && path !== '/auth/login') cfg.onSesionVencida?.();
       const msg = await res.json().then((j: { mensaje?: string }) => j.mensaje).catch(() => undefined);
       throw new ApiError(res.status, msg ?? 'No se pudo completar la solicitud.');
     }
@@ -46,7 +49,8 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
   const archivoUrl = async (entregaId: string, archivoId: string) => {
     const token = await cfg.getToken();
     const res = await f(cfg.baseUrl.replace(/\/$/, '') + `/entregas/${entregaId}/archivos/${archivoId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-    if (!res.ok) throw new ApiError(res.status, 'No se pudo descargar el archivo de la entrega.');
+    if (res.status === 401) cfg.onSesionVencida?.();
+    if (!res.ok) throw new ApiError(res.status, res.status === 404 ? 'El archivo de la entrega no está disponible.' : 'No se pudo descargar el archivo de la entrega.');
     return URL.createObjectURL(await res.blob());
   };
   // No se descarga cada archivo al listar. La UI solicita la URL bajo demanda.

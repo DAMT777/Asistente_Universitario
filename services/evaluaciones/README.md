@@ -6,6 +6,9 @@ ASP.NET Core sobre .NET 10 con EF Core y SQL Server. Puerto local 5002.
 
 | CU | Endpoint | Caso de uso |
 |----|----------|-------------|
+| — | `GET /cursos/{cursoId}` (profesor dueño o estudiante inscrito) | `ObtenerCurso` |
+| CU-02 | `PUT /cursos/{cursoId}/pesos` (profesor) | `DefinirPesosCortes` |
+| CU-03 | `POST /cursos/{cursoId}/actividades` y `PUT /actividades/{actividadId}` (profesor) | `GestionarActividad` |
 | CU-05, CU-06, CU-07 | `PUT /actividades/{actividadId}/calificaciones/{estudianteId}` (profesor; `If-Match` opcional) | `CalificarActividad` |
 | CU-08 | `POST /actividades/{actividadId}/calificaciones/publicar` (profesor) | `PublicarCalificacionesDeActividad` |
 | CU-09 | `GET /cursos/{cursoId}/ponderado` y `GET /cursos/{cursoId}/ponderado/{estudianteId}` | `ConsultarPonderado` |
@@ -14,6 +17,8 @@ ASP.NET Core sobre .NET 10 con EF Core y SQL Server. Puerto local 5002.
 | CU-12 | `GET /cursos` y `GET /cursos/{cursoId}/actividades?soloPendientes=true` | `ListarCursos`, `ListarActividadesDelCurso` |
 | CU-15 | `GET /mis-notas/cursos/{cursoId}/actividades` (estudiante) | `ObtenerNotasActividades` |
 | CU-16 | `GET /mis-notas` (estudiante) | `ObtenerMatrizNotas` |
+
+CU-02 y CU-03 vienen de la rama `Angy`. Los pesos de los tres cortes deben sumar 100, cada uno entre 0 y 100 con dos decimales como máximo (422 `PESOS_CORTE_INVALIDOS`). Una actividad necesita título, corte 1 a 3 y un peso mayor que 0; las del mismo corte no pueden pasar de 100 (422 `PESOS_ACTIVIDAD_EXCEDIDOS`). Si requiere entrega, la fecha límite es obligatoria, y una fecha nueva debe ser futura (al editar se puede conservar la que ya tenía). El ponderado se calcula al consultar, así que un cambio de pesos se refleja de inmediato.
 
 CU-05 a CU-08 vienen de la rama `velez`. Calificar crea o modifica la nota y la retroalimentación del estudiante; toda nota nueva o modificada queda en `BORRADOR` y el estudiante no la ve hasta que se publica la actividad (CU-08), que pasa a `PUBLICADA` todos los borradores de esa actividad y responde cuántos publicó. Si la modificación no cambia nada, la calificación conserva su estado. La respuesta lleva `ETag`; si el cliente manda `If-Match` con otra versión recibe 409 `CONFLICTO_CONCURRENCIA`. Nota fuera de 0.0–5.0: 422 `NOTA_FUERA_DE_RANGO`; `entregaId` en una actividad sin entrega: 422 `ACTIVIDAD_SIN_ENTREGA`.
 
@@ -74,4 +79,4 @@ dotnet run --project src/Evaluaciones.Api            # levanta en http://localho
 
 ## Pendiente de otros frentes
 
-Crear y editar actividades y cambiar los pesos de los cortes. Los endpoints de calificar y publicar (CU-05 a CU-08) todavía no están en `contracts/evaluaciones.yaml`.
+Los endpoints de CU-02, CU-03 y CU-05 a CU-08 y `GET /cursos/{cursoId}` todavía no están en `contracts/evaluaciones.yaml`.

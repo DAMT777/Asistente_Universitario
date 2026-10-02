@@ -13,4 +13,6 @@ public static class CodigosError
     public const string SinCalificaciones = "SIN_CALIFICACIONES";
     public const string NotaFueraDeRango = "NOTA_FUERA_DE_RANGO";
     public const string ActividadSinEntrega = "ACTIVIDAD_SIN_ENTREGA";
+    public const string PesosCorteInvalidos = "PESOS_CORTE_INVALIDOS";
+    public const string PesosActividadExcedidos = "PESOS_ACTIVIDAD_EXCEDIDOS";
 }

@@ -58,14 +58,5 @@ public sealed class ListarActividadesDelCurso(
             .ThenBy(a => a.Titulo);
 
     private static ActividadDto Dto(Actividad actividad, DateTime ahoraUtc, string? estado) =>
-        new(
-            actividad.Id,
-            actividad.CursoId,
-            actividad.Titulo,
-            actividad.Corte,
-            actividad.Peso,
-            actividad.FechaLimite,
-            actividad.RequiereEntrega,
-            Vencida: actividad.FechaLimite is not null && ahoraUtc > actividad.FechaLimite,
-            estado);
+        actividad.ADto(ahoraUtc, estado);
 }

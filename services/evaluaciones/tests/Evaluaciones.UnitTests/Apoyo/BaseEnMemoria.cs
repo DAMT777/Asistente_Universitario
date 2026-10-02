@@ -24,6 +24,12 @@ public sealed class BaseEnMemoria :
     public Task<Curso?> ObtenerAsync(Guid cursoId, CancellationToken ct) =>
         Task.FromResult(Cursos.FirstOrDefault(c => c.Id == cursoId));
 
+    public Task<Curso?> ObtenerCursoParaEditarAsync(Guid cursoId, CancellationToken ct) => ObtenerAsync(cursoId, ct);
+
+    public Task<Actividad?> ObtenerActividadParaEditarAsync(Guid actividadId, CancellationToken ct) => ObtenerActividadAsync(actividadId, ct);
+
+    public void AgregarActividad(Actividad actividad) => Actividades.Add(actividad);
+
     public Task<IReadOnlyList<Curso>> ListarPorProfesorAsync(Guid profesorId, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<Curso>>(Cursos.Where(c => c.ProfesorId == profesorId).ToList());
 

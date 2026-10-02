@@ -10,6 +10,9 @@ internal sealed class CursoRepository(EvaluacionesDbContext db) : ICursoReposito
     public Task<Curso?> ObtenerAsync(Guid cursoId, CancellationToken ct) =>
         db.Cursos.AsNoTracking().FirstOrDefaultAsync(c => c.Id == cursoId, ct);
 
+    public Task<Curso?> ObtenerCursoParaEditarAsync(Guid cursoId, CancellationToken ct) =>
+        db.Cursos.FirstOrDefaultAsync(c => c.Id == cursoId, ct);
+
     public async Task<IReadOnlyList<Curso>> ListarPorProfesorAsync(Guid profesorId, CancellationToken ct) =>
         await db.Cursos.AsNoTracking()
             .Where(c => c.ProfesorId == profesorId)
@@ -37,6 +40,11 @@ internal sealed class ActividadRepository(EvaluacionesDbContext db) : IActividad
 {
     public Task<Actividad?> ObtenerActividadAsync(Guid actividadId, CancellationToken ct) =>
         db.Actividades.AsNoTracking().FirstOrDefaultAsync(a => a.Id == actividadId, ct);
+
+    public Task<Actividad?> ObtenerActividadParaEditarAsync(Guid actividadId, CancellationToken ct) =>
+        db.Actividades.FirstOrDefaultAsync(a => a.Id == actividadId, ct);
+
+    public void AgregarActividad(Actividad actividad) => db.Actividades.Add(actividad);
 
     public async Task<IReadOnlyList<Actividad>> ListarActividadesAsync(Guid cursoId, CancellationToken ct) =>
         await db.Actividades.AsNoTracking().Where(a => a.CursoId == cursoId).ToListAsync(ct);

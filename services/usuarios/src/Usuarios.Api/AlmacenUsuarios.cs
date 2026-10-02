@@ -1,56 +1,42 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Usuarios.Api;
 
 /// <summary>
-/// Almacén de usuarios en memoria. Sustituye a usuarios_db mientras el frente A no entrega la base real.
-/// Los datos semilla (sección 9.8) solo existen en desarrollo.
+/// CU-01. Busca al usuario en usuarios_db y verifica la contraseña con el hasher de ASP.NET Core Identity
+/// (sección 12.3). Acepta código institucional, documento o correo.
 /// </summary>
-public sealed class AlmacenUsuarios
+public sealed class AlmacenUsuarios(UsuariosDbContext db)
 {
-    private const string ClaveDemo = "Demo1234!";
+    private static readonly PasswordHasher<Usuario> Hasher = new();
 
-    private readonly PasswordHasher<Usuario> _hasher = new();
-    private readonly List<Usuario> _usuarios = [];
-    private readonly string _hashFalso;
+    // Sirve para gastar el mismo tiempo cuando el usuario no existe y no revelar cuáles existen.
+    private static readonly string HashFalso = Hasher.HashPassword(new Usuario(), Guid.NewGuid().ToString("N"));
 
-    public AlmacenUsuarios(IHostEnvironment entorno)
+    public static string Hashear(Usuario usuario, string password) => Hasher.HashPassword(usuario, password);
+
+    /// <returns>Null si las credenciales no son válidas, sin distinguir la causa.</returns>
+    public async Task<Usuario?> AutenticarAsync(string identificador, string password, CancellationToken ct)
     {
-        // Sirve para gastar el mismo tiempo cuando el usuario no existe y no revelar cuáles existen.
-        _hashFalso = _hasher.HashPassword(null!, Guid.NewGuid().ToString("N"));
-
-        if (!entorno.IsDevelopment()) return;
-
-        Agregar("a0000000-0000-0000-0000-000000000001", "1000000001", "P0001", "Profesor Demo", "profesor@demo.unillanos.edu.co", Roles.Profesor);
-        Agregar("b0000000-0000-0000-0000-000000000001", "1000000011", "E0001", "Ana Demo", "ana@demo.unillanos.edu.co", Roles.Estudiante);
-        Agregar("b0000000-0000-0000-0000-000000000002", "1000000012", "E0002", "Luis Demo", "luis@demo.unillanos.edu.co", Roles.Estudiante);
-        Agregar("b0000000-0000-0000-0000-000000000003", "1000000013", "E0003", "Marta Demo", "marta@demo.unillanos.edu.co", Roles.Estudiante);
-    }
-
-    private void Agregar(string id, string documento, string codigo, string nombre, string correo, string rol)
-    {
-        var usuario = new Usuario(Guid.Parse(id), documento, codigo, nombre, correo, "", rol);
-        _usuarios.Add(usuario with { PasswordHash = _hasher.HashPassword(usuario, ClaveDemo) });
-    }
-
-    /// <summary>Acepta código institucional, documento o correo. Devuelve null si las credenciales no son válidas.</summary>
-    public Usuario? Autenticar(string identificador, string password)
-    {
-        var usuario = _usuarios.FirstOrDefault(u =>
-            string.Equals(u.CodigoInstitucional, identificador, StringComparison.OrdinalIgnoreCase)
+        var codigo = identificador.ToUpperInvariant();
+        var correo = identificador.ToLowerInvariant();
+        var usuario = await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(u =>
+            u.CodigoInstitucional == codigo
             || u.Documento == identificador
-            || string.Equals(u.Correo, identificador, StringComparison.OrdinalIgnoreCase));
+            || u.Correo == correo, ct);
 
         if (usuario is null)
         {
-            _hasher.VerifyHashedPassword(null!, _hashFalso, password);
+            Hasher.VerifyHashedPassword(new Usuario(), HashFalso, password);
             return null;
         }
 
-        return _hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, password) == PasswordVerificationResult.Failed
+        return Hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, password) == PasswordVerificationResult.Failed
             ? null
             : usuario;
     }
 
-    public Usuario? Buscar(Guid id) => _usuarios.FirstOrDefault(u => u.Id == id);
+    public Task<Usuario?> BuscarAsync(Guid id, CancellationToken ct) =>
+        db.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
 }

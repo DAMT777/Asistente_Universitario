@@ -7,6 +7,10 @@ namespace Evaluaciones.Application.Abstracciones;
 public interface ICursoRepository
 {
     Task<Curso?> ObtenerAsync(Guid cursoId, CancellationToken ct);
+
+    /// <summary>Con seguimiento, para modificar los pesos (CU-02).</summary>
+    Task<Curso?> ObtenerCursoParaEditarAsync(Guid cursoId, CancellationToken ct);
+
     Task<IReadOnlyList<Curso>> ListarPorProfesorAsync(Guid profesorId, CancellationToken ct);
     Task<IReadOnlyList<Curso>> ListarPorEstudianteAsync(Guid estudianteId, CancellationToken ct);
 }
@@ -20,6 +24,12 @@ public interface IInscripcionRepository
 public interface IActividadRepository
 {
     Task<Actividad?> ObtenerActividadAsync(Guid actividadId, CancellationToken ct);
+
+    /// <summary>Con seguimiento, para editarla (CU-03).</summary>
+    Task<Actividad?> ObtenerActividadParaEditarAsync(Guid actividadId, CancellationToken ct);
+
+    void AgregarActividad(Actividad actividad);
+
     Task<IReadOnlyList<Actividad>> ListarActividadesAsync(Guid cursoId, CancellationToken ct);
     Task<IReadOnlyList<Actividad>> ListarActividadesDeCursosAsync(IReadOnlyCollection<Guid> cursoIds, CancellationToken ct);
 }

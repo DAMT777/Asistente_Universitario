@@ -11,8 +11,8 @@ Frontend (React, 5173) -> API Gateway (YARP, 5000) -> Usuarios (5001) · Evaluac
 |---|---|
 | `Frontend/Interfaz/code/` | Aplicación web (React + Vite). Entra al backend solo por el gateway. |
 | `services/gateway/` | Punto único de entrada (YARP): valida el JWT, aplica CORS, bloquea `/internal/**` y enruta. |
-| `services/usuarios/` | Login (CU-01), `/auth/me` y emisión del JWT RS256. |
-| `services/evaluaciones/` | Cursos, actividades, calificaciones de actividad (CU-05 a CU-08), ponderado y publicación de cortes (CU-09 a CU-12) y notas del estudiante (CU-15, CU-16). |
+| `services/usuarios/` | Login (CU-01) contra `usuarios_db` (EF Core; en desarrollo, base en memoria con los usuarios de prueba), `/auth/me` y emisión del JWT RS256. |
+| `services/evaluaciones/` | Cursos, pesos de los cortes y actividades (CU-02, CU-03), calificaciones de actividad (CU-05 a CU-08), ponderado y publicación de cortes (CU-09 a CU-12) y notas del estudiante (CU-15, CU-16). |
 | `services/entregas/` | Entregas con uno o varios archivos en Blob Storage (CU-13, CU-14) y su consulta por el profesor. |
 | `services/compartido/` | `Unillanos.ServiceDefaults` (errores, JWT, correlación, health, logs) y `Unillanos.Pruebas.Compartidas` (ayudas de prueba y lector de contratos). |
 | `contracts/` | Contratos OpenAPI: la fuente de verdad de la API. Los cambios van en `CAMBIOS_CONTRATO.md`. |
@@ -104,7 +104,9 @@ dotnet ef migrations add <Nombre> --output-dir Persistencia/Migraciones \
 | Estudiante: inicio, cursos, notas y matriz por corte (CU-12, CU-15, CU-16) | Funciona |
 | Estudiante: entregar uno o varios archivos, reemplazar, anular y descargar (CU-13, CU-14) | Funciona |
 | Profesor: calificar, retroalimentar, modificar y publicar notas de actividad (CU-05 a CU-08) | Funciona |
-| Profesor: crear actividades y cambiar pesos | Sin backend todavía |
+| Profesor: pesos de los cortes y crear o editar actividades (CU-02, CU-03) | Funciona |
+| Profesor: filtrar *Con entrega / Sin entrega* al calificar (CU-04) | Funciona |
+| Sesión vencida: el frontend cierra la sesión y vuelve al acceso con un aviso | Funciona |
 
 ## Reglas del repositorio
 

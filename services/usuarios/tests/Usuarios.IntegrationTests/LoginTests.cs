@@ -33,6 +33,9 @@ public sealed class FabricaUsuarios : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("Jwt:PrivateKeyPath", _rutaPrivada);
+        // Cada fábrica tiene su propia base en memoria, también cuando la prueba cambia a Production.
+        builder.UseSetting("Database:UseInMemory", "true");
+        builder.UseSetting("Database:InMemoryName", Guid.NewGuid().ToString("N"));
     }
 
     protected override void Dispose(bool disposing)

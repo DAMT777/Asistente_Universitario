@@ -42,7 +42,5 @@ public sealed class ListarCursos(
         throw new DominioException(CodigosError.SinPermiso, "El rol no puede consultar cursos.");
     }
 
-    private static CursoResumenDto Resumen(Curso curso, int? pendientes) =>
-        new(curso.Id, curso.Codigo, curso.Nombre, curso.ProfesorNombre,
-            curso.PesoCorte1, curso.PesoCorte2, curso.PesoCorte3, pendientes);
+    private static CursoResumenDto Resumen(Curso curso, int? pendientes) => curso.AResumen(pendientes);
 }

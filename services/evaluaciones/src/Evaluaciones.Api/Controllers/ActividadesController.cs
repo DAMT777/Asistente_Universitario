@@ -6,15 +6,22 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Evaluaciones.Api.Controllers;
 
-/// <summary>Calificaciones de una actividad. Solo el profesor; la propiedad del curso la verifica cada caso de uso (RN-15).</summary>
+/// <summary>Actividades y sus calificaciones. Solo el profesor; la propiedad del curso la verifica cada caso de uso (RN-15).</summary>
 [ApiController]
 [Authorize(Policy = Politicas.Profesor)]
 [Route("actividades")]
 public sealed class ActividadesController(
     ListarCalificacionesDeActividad listarCalificaciones,
     CalificarActividad calificar,
-    PublicarCalificacionesDeActividad publicarCalificaciones) : ControllerBase
+    PublicarCalificacionesDeActividad publicarCalificaciones,
+    GestionarActividad gestionarActividad) : ControllerBase
 {
+    /// <summary>CU-03. Edita la actividad: título, corte, peso, fecha límite y si requiere entrega.</summary>
+    [HttpPut("{actividadId:guid}")]
+    public async Task<ActionResult<ActividadDto>> Editar(
+        Guid actividadId, [FromBody] SolicitudActividad solicitud, CancellationToken ct) =>
+        Ok(await gestionarActividad.EditarAsync(User.ObtenerId(), actividadId, solicitud, ct));
+
     /// <summary>Calificaciones de la actividad en cualquier estado.</summary>
     [HttpGet("{actividadId:guid}/calificaciones")]
     public async Task<ActionResult<IReadOnlyList<CalificacionDto>>> Calificaciones(Guid actividadId, CancellationToken ct) =>

@@ -6,15 +6,21 @@ public static class Roles
     public const string Estudiante = "ESTUDIANTE";
 }
 
-/// <summary>Persona que inicia sesión (sección 9.2 de la guía técnica).</summary>
-public sealed record Usuario(
-    Guid Id,
-    string Documento,
-    string CodigoInstitucional,
-    string Nombre,
-    string Correo,
-    string PasswordHash,
-    string Rol);
+/// <summary>Persona que inicia sesión (tabla Usuario de usuarios_db, sección 9.2 de la guía técnica).</summary>
+public class Usuario
+{
+    public Guid Id { get; set; }
+    public string Documento { get; set; } = "";
+    public string CodigoInstitucional { get; set; } = "";
+    public string Nombre { get; set; } = "";
+    public string Correo { get; set; } = "";
+
+    /// <summary>Hash con sal del PasswordHasher de ASP.NET Core Identity (sección 12.3). Nunca sale en una respuesta.</summary>
+    public string PasswordHash { get; set; } = "";
+
+    /// <summary>PROFESOR o ESTUDIANTE.</summary>
+    public string Rol { get; set; } = "";
+}
 
 public sealed record SolicitudLogin(string? Usuario, string? Password);
 

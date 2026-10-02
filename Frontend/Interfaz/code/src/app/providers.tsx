@@ -26,7 +26,13 @@ export function Providers({ children }: { children: ReactNode }) {
   const [qc] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } } }));
   const entorno = useMemo(() => {
     if (API_URL) {
-      return { api: createHttpApi({ baseUrl: API_URL, getToken: () => JSON.parse(localStorage.getItem(CLAVE) ?? 'null')?.token ?? null }), hoy: undefined, almacen: almacenLocal };
+      // Sesión vencida o token inválido (CU-01): se borra la sesión y se vuelve al acceso con un aviso.
+      const onSesionVencida = () => {
+        if (!localStorage.getItem(CLAVE)) return;
+        localStorage.removeItem(CLAVE);
+        window.location.assign('/login?sesion=vencida');
+      };
+      return { api: createHttpApi({ baseUrl: API_URL, getToken: () => JSON.parse(localStorage.getItem(CLAVE) ?? 'null')?.token ?? null, onSesionVencida }), hoy: undefined, almacen: almacenLocal };
     }
     const hoy = () => HOY_DEMO;
     return { api: createMockApi({ hoy }), hoy, almacen: almacenMemoria() };

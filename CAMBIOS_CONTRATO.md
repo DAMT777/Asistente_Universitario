@@ -27,6 +27,14 @@
 - Se conservó `/mis-notas` según el contrato (CU-15 y CU-16); la versión de `velez` de esos endpoints no se trajo.
 - Pendiente: agregar estos dos endpoints a `contracts/evaluaciones.yaml`.
 
+### D. Integración con la rama Angy (CU-01 a CU-04)
+
+- Nuevos en Evaluaciones: `GET /cursos/{cursoId}`, `PUT /cursos/{cursoId}/pesos` (body `{ pesoCorte1, pesoCorte2, pesoCorte3 }`, responde el curso), `POST /cursos/{cursoId}/actividades` (201) y `PUT /actividades/{actividadId}` (body `{ titulo, corte, peso, fechaLimite, requiereEntrega }`, responde la actividad).
+- Códigos nuevos: `PESOS_CORTE_INVALIDOS` y `PESOS_ACTIVIDAD_EXCEDIDOS` (422).
+- Usuarios lee de `usuarios_db` con EF Core. `/auth/login` y `/auth/me` no cambian.
+- No se trajeron de esa rama: su servicio de entregas de un solo archivo, su `/mis-notas`, ni `backend/servicio-usuarios` (`MiniIdentityApi`, con PostgreSQL y Swagger, fuera de las librerías permitidas y duplicado de `services/usuarios`).
+- Pendiente: agregar estos endpoints a `contracts/evaluaciones.yaml`.
+
 ## Propuestas pendientes
 
 No se cambió en silencio ningún contrato. `contracts/entregas.yaml` y `contracts/evaluaciones.yaml` reflejan lo acordado.
