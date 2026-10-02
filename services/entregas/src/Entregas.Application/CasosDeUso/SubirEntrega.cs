@@ -6,7 +6,7 @@ using Entregas.Domain;
 
 namespace Entregas.Application.CasosDeUso;
 
-public sealed record SubirEntregaComando(Guid ActividadId, Guid EstudianteId, ArchivoEntrante? Archivo);
+public sealed record SubirEntregaComando(Guid ActividadId, Guid EstudianteId, IReadOnlyList<ArchivoEntrante> Archivos);
 
 public sealed class SubirEntregaValidador : AbstractValidator<SubirEntregaComando>
 {
@@ -14,11 +14,11 @@ public sealed class SubirEntregaValidador : AbstractValidator<SubirEntregaComand
     {
         RuleFor(c => c.ActividadId).NotEmpty();
         RuleFor(c => c.EstudianteId).NotEmpty();
-        RuleFor(c => c.Archivo).NotNull().WithMessage("El campo 'archivo' es obligatorio.");
+        RuleFor(c => c.Archivos).NotEmpty().WithMessage("Adjunte al menos un archivo en el campo 'archivo'.");
     }
 }
 
-/// <summary>CU-13: el estudiante sube una entrega antes de la fecha límite.</summary>
+/// <summary>CU-13: el estudiante entrega uno o varios archivos antes de la fecha límite.</summary>
 public sealed class SubirEntrega(
     IValidator<SubirEntregaComando> validador,
     ReceptorArchivos receptor,
@@ -31,31 +31,30 @@ public sealed class SubirEntrega(
     public async Task<EntregaRespuesta> EjecutarAsync(SubirEntregaComando comando, CancellationToken ct)
     {
         await validador.ValidateAndThrowAsync(comando, ct);
-        var archivo = comando.Archivo!;
-        var tipo = await receptor.ValidarAsync(archivo, ct);
+        var tipos = await receptor.ValidarAsync(comando.Archivos, ct);
 
         var actividad = await actividades.ObtenerParaEstudianteAsync(comando.ActividadId, comando.EstudianteId, ct);
         PoliticaSubida.Verificar(actividad.RequiereEntrega, new PlazoEntrega(actividad.FechaLimite), reloj.GetUtcNow());
 
         var existente = await repositorio.ObtenerPorActividadYEstudianteAsync(comando.ActividadId, comando.EstudianteId, ct);
-        var guardado = await receptor.GuardarAsync(comando.ActividadId, comando.EstudianteId, archivo, tipo, ct);
+        var guardados = await receptor.GuardarAsync(comando.ActividadId, comando.EstudianteId, comando.Archivos, tipos, ct);
 
         // RN-07: una sola fila por actividad y estudiante; si ya existe (enviada o anulada) se reutiliza.
-        string? rutaReemplazada = null;
+        IReadOnlyList<string> reemplazadas = [];
         var entrega = existente;
         if (entrega is null)
         {
-            entrega = Entrega.Crear(comando.ActividadId, comando.EstudianteId, guardado, reloj.GetUtcNow());
+            entrega = Entrega.Crear(comando.ActividadId, comando.EstudianteId, guardados, reloj.GetUtcNow());
             repositorio.Agregar(entrega);
         }
         else
         {
-            rutaReemplazada = entrega.ReemplazarArchivo(guardado, reloj.GetUtcNow());
+            reemplazadas = entrega.ReemplazarArchivos(guardados, reloj.GetUtcNow());
         }
 
-        await persistencia.GuardarAsync(guardado.RutaBlob, rutaReemplazada, ct);
-        logger.LogInformation("Entrega {EntregaId} subida a la actividad {ActividadId} por {EstudianteId}",
-            entrega.Id, entrega.ActividadId, entrega.EstudianteId);
+        await persistencia.GuardarAsync(guardados.Select(g => g.RutaBlob).ToList(), reemplazadas, ct);
+        logger.LogInformation("Entrega {EntregaId} con {Archivos} archivo(s) subida a la actividad {ActividadId} por {EstudianteId}",
+            entrega.Id, guardados.Count, entrega.ActividadId, entrega.EstudianteId);
         return EntregaRespuesta.Desde(entrega);
     }
 }

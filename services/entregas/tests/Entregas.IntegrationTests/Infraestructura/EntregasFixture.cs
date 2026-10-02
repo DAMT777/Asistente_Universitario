@@ -41,6 +41,6 @@ public sealed class EntregasFixture : IAsyncLifetime
         await _sql.DisposeAsync();
     }
 
-    private string CadenaPara(string baseDatos)
+    public string CadenaPara(string baseDatos)
         => new SqlConnectionStringBuilder(_sql.GetConnectionString()) { InitialCatalog = baseDatos }.ConnectionString;
 }

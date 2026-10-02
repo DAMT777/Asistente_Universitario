@@ -66,7 +66,7 @@ export function calificacionDesde(n: NotaActividad, entrega: Entrega | undefined
     actividadId: n.actividadId,
     estudianteId,
     entregado: enviada ? fechaLocal(enviada.fechaEnvio) : null,
-    archivo: enviada?.nombreArchivo ?? null,
+    archivo: enviada ? enviada.archivos.map((a) => a.nombreArchivo).join(', ') : null,
     nota: publicada ? n.nota : null,
     estado: publicada ? 'publicada' : null,
     retro: publicada ? n.retroalimentacion ?? '' : '',

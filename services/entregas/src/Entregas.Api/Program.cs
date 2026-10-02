@@ -20,10 +20,10 @@ builder.Services.AddOptions<EntregasOpciones>()
     .ValidateOnStart();
 
 // Kestrel corta cuerpos muy grandes antes de leerlos (413). El margen cubre los encabezados multipart;
-// el límite exacto del archivo lo valida el dominio, también con ARCHIVO_DEMASIADO_GRANDE.
-const long MargenMultipart = 64 * 1024;
+// los límites exactos (por archivo y total) los valida el dominio, también con ARCHIVO_DEMASIADO_GRANDE.
+const long MargenMultipart = 256 * 1024;
 builder.Services.AddOptions<KestrelServerOptions>().Configure<IOptions<EntregasOpciones>>(
-    (k, o) => k.Limits.MaxRequestBodySize = o.Value.MaxBytes + MargenMultipart);
+    (k, o) => k.Limits.MaxRequestBodySize = o.Value.MaxBytesTotal + MargenMultipart);
 
 builder.Services.AddAplicacionEntregas();
 builder.Services.AddInfraestructuraEntregas(builder.Configuration);

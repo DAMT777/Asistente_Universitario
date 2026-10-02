@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ArchivoEntrega } from '@/types';
+import type { ArchivoDescargado, ArchivoEntrega } from '@/types';
 import {
   actividadSchema, calificacionSchema, cursoSchema, entregaSchema, matrizNotasSchema, notasActividadesSchema, sesionSchema, usuarioSchema,
 } from '@/schemas';
@@ -19,7 +19,7 @@ const errorSchema = z.object({ codigo: z.string().optional(), mensaje: z.string(
 export function createHttpApi(cfg: HttpConfig): ApiClient {
   const f = cfg.fetchImpl ?? fetch;
 
-  async function req<T>(method: string, path: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, body?: unknown): Promise<T> {
+  async function enviar(method: string, path: string, body?: unknown, accept = 'application/json'): Promise<Response> {
     const token = await cfg.getToken();
     const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     let res: Response;
@@ -27,7 +27,7 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
       res = await f(cfg.baseUrl + path, {
         method,
         headers: {
-          Accept: 'application/json',
+          Accept: accept,
           ...(isForm || body === undefined ? {} : { 'Content-Type': 'application/json' }),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -41,14 +41,25 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
       const datos = err.success ? err.data : {};
       throw new ApiError(res.status, datos.mensaje ?? 'No se pudo completar la solicitud.', datos.codigo);
     }
+    return res;
+  }
+
+  async function req<T>(method: string, path: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, body?: unknown): Promise<T> {
+    const res = await enviar(method, path, body);
     if (res.status === 204) return schema.parse(undefined);
     return schema.parse(await res.json());
   }
 
-  /** multipart/form-data con el campo "archivo". En React Native `datos` es { uri, name, type }. */
-  function formulario(archivo: ArchivoEntrega): FormData {
+  /** Respuesta binaria; el nombre sale de Content-Disposition (o del que ya conocemos). */
+  async function descargar(path: string, nombrePorDefecto: string): Promise<ArchivoDescargado> {
+    const res = await enviar('GET', path, undefined, '*/*');
+    return { nombre: nombreDeDisposicion(res.headers.get('Content-Disposition')) ?? nombrePorDefecto, datos: await res.blob() };
+  }
+
+  /** multipart/form-data con un campo "archivo" por archivo. En React Native `datos` es { uri, name, type }. */
+  function formulario(archivos: ArchivoEntrega[]): FormData {
     const fd = new FormData();
-    fd.append('archivo', archivo.datos as Blob, archivo.nombre);
+    for (const a of archivos) fd.append('archivo', a.datos as Blob, a.nombre);
     return fd;
   }
 
@@ -79,9 +90,22 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
       matriz: () => req('GET', '/mis-notas', matrizNotasSchema),
       notasCurso: (cursoId) => req('GET', `/mis-notas/cursos/${encodeURIComponent(cursoId)}/actividades`, notasActividadesSchema),
       misEntregas: () => req('GET', '/mis-entregas', z.array(entregaSchema)),
-      subirEntrega: (actividadId, archivo) => req('POST', `/actividades/${encodeURIComponent(actividadId)}/entregas`, entregaSchema, formulario(archivo)),
-      editarEntrega: (entregaId, archivo) => req('PUT', `/entregas/${encodeURIComponent(entregaId)}`, entregaSchema, formulario(archivo)),
+      subirEntrega: (actividadId, archivos) => req('POST', `/actividades/${encodeURIComponent(actividadId)}/entregas`, entregaSchema, formulario(archivos)),
+      editarEntrega: (entregaId, archivos) => req('PUT', `/entregas/${encodeURIComponent(entregaId)}`, entregaSchema, formulario(archivos)),
       anularEntrega: (entregaId) => req('DELETE', `/entregas/${encodeURIComponent(entregaId)}`, entregaSchema),
+      descargarArchivo: (entregaId, archivoId) =>
+        descargar(`/entregas/${encodeURIComponent(entregaId)}/archivos/${encodeURIComponent(archivoId)}`, 'archivo'),
     },
   };
+}
+
+/** filename*=UTF-8''nombre (RFC 6266) o filename="nombre". */
+export function nombreDeDisposicion(valor: string | null): string | null {
+  if (!valor) return null;
+  const extendido = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(valor);
+  if (extendido) {
+    try { return decodeURIComponent(extendido[1].trim()); } catch { /* sigue con filename */ }
+  }
+  const simple = /filename\s*=\s*"?([^";]+)"?/i.exec(valor);
+  return simple ? simple[1].trim() : null;
 }

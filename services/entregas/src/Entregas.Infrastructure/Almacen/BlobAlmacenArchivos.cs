@@ -1,3 +1,4 @@
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -15,6 +16,18 @@ public sealed class BlobAlmacenArchivos(BlobContainerClient contenedor) : IAlmac
         await _contenedorListo.Value;
         var opciones = new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = contentType } };
         await contenedor.GetBlobClient(ruta).UploadAsync(contenido, opciones, ct);
+    }
+
+    public async Task<Stream?> AbrirAsync(string ruta, CancellationToken ct)
+    {
+        try
+        {
+            return await contenedor.GetBlobClient(ruta).OpenReadAsync(cancellationToken: ct);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
     }
 
     public Task EliminarAsync(string ruta, CancellationToken ct)

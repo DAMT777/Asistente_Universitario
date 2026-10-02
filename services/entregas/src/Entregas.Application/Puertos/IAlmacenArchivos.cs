@@ -4,5 +4,7 @@ namespace Entregas.Application.Puertos;
 public interface IAlmacenArchivos
 {
     Task GuardarAsync(string ruta, Stream contenido, string contentType, CancellationToken ct);
+    /// <summary>Abre el contenido para leerlo. Devuelve null si el blob no existe.</summary>
+    Task<Stream?> AbrirAsync(string ruta, CancellationToken ct);
     Task EliminarAsync(string ruta, CancellationToken ct);
 }

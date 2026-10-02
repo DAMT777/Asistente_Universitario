@@ -16,6 +16,9 @@ public sealed class AlmacenEnMemoria : IAlmacenArchivos
         Blobs[ruta] = (copia.ToArray(), contentType);
     }
 
+    public Task<Stream?> AbrirAsync(string ruta, CancellationToken ct)
+        => Task.FromResult<Stream?>(Blobs.TryGetValue(ruta, out var b) ? new MemoryStream(b.Datos, writable: false) : null);
+
     public Task EliminarAsync(string ruta, CancellationToken ct)
     {
         Blobs.TryRemove(ruta, out _);

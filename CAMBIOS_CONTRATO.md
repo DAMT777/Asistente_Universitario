@@ -1,5 +1,18 @@
 # Propuestas de cambio al contrato
 
+## Cambios aplicados (pedidos por el equipo)
+
+### A. Entregas con varios archivos, límites y descarga — aplicado en `contracts/entregas.yaml`
+
+- `POST /actividades/{id}/entregas` y `PUT /entregas/{id}` aceptan varios archivos: el campo multipart `archivo` se repite una vez por archivo. Editar reemplaza el conjunto completo.
+- La respuesta `Entrega` cambia `nombreArchivo` y `tamano` por `archivos: [{ id, nombreArchivo, tamano }]` y `tamanoTotal`. **Es un cambio incompatible**: el frontend ya está adaptado.
+- Límites configurables: `Entregas__MaxBytes` por archivo (20 MB), `Entregas__MaxBytesTotal` por entrega (50 MB, 413 si se supera) y `Entregas__MaxArchivos` (10, 400 si se supera).
+- Nuevo `GET /entregas/{entregaId}/archivos/{archivoId}`: descarga el archivo con su nombre original. Un archivo ajeno responde 404. Si el frontend se sirve en otro origen que el gateway, este debe exponer `Content-Disposition` (`Access-Control-Expose-Headers`).
+- Base de datos: nueva tabla `ArchivoEntrega` (migración `ArchivosMultiples`, que copia el archivo de cada entrega existente antes de quitar las columnas de `Entrega`).
+- Pendiente de decidir: hoy el límite es del sistema. Si cada docente debe fijar el límite de su actividad, hay que agregar el campo a `Actividad` y a `GET /internal/actividades/{id}`.
+
+## Propuestas pendientes
+
 No se cambió en silencio ningún contrato. `contracts/entregas.yaml` y `contracts/evaluaciones.yaml` reflejan lo acordado.
 Estos son los vacíos que aparecieron al implementar CU-13 a CU-16 y cómo se resolvieron mientras el equipo decide.
 

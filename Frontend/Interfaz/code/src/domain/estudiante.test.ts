@@ -20,7 +20,8 @@ const nota = (extra: Partial<NotaActividad> = {}): NotaActividad => ({
   estado: 'SIN_CALIFICAR', nota: null, retroalimentacion: null, ...extra,
 });
 const entrega = (estado: Entrega['estado']): Entrega => ({
-  id: 'x1', actividadId: 'd1', estudianteId: 'e1', fechaEnvio: '2026-10-01T15:00:00Z', estado, nombreArchivo: 'taller.pdf', tamano: 10,
+  id: 'x1', actividadId: 'd1', estudianteId: 'e1', fechaEnvio: '2026-10-01T15:00:00Z', estado,
+  archivos: [{ id: 'a1', nombreArchivo: 'taller.pdf', tamano: 10 }, { id: 'a2', nombreArchivo: 'anexo.png', tamano: 5 }], tamanoTotal: 15,
 });
 
 describe('resumenDesdeMatriz', () => {
@@ -57,7 +58,7 @@ describe('calificacionDesde', () => {
   it('con entrega enviada la actividad queda "entregada"', () => {
     const n = nota();
     const c = calificacionDesde(n, entrega('ENVIADA'), 'e1');
-    expect(c).toMatchObject({ archivo: 'taller.pdf', nota: null, estado: null });
+    expect(c).toMatchObject({ archivo: 'taller.pdf, anexo.png', nota: null, estado: null });
     expect(estadoEstudiante(actividadDesdeNota('c1', n), c, '2026-10-01')).toBe('entregada');
   });
 

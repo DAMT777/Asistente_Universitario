@@ -12,8 +12,8 @@ public sealed class FechaLimiteVencidaException()
 public sealed class ActividadSinEntregaException()
     : ExcepcionDominio("ACTIVIDAD_SIN_ENTREGA", "La actividad no recibe entregas.");
 
-public sealed class ArchivoDemasiadoGrandeException(long maxBytes)
-    : ExcepcionDominio("ARCHIVO_DEMASIADO_GRANDE", $"El archivo supera el máximo de {maxBytes} bytes.");
+public sealed class ArchivoDemasiadoGrandeException(string mensaje)
+    : ExcepcionDominio("ARCHIVO_DEMASIADO_GRANDE", mensaje);
 
 public sealed class TipoArchivoNoPermitidoException(string detalle)
     : ExcepcionDominio("TIPO_ARCHIVO_NO_PERMITIDO", detalle);

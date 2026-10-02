@@ -23,7 +23,8 @@ public sealed class EditarAnularEntregaTests(EntregasFixture fixture) : PruebaEn
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         await respuesta.CumpleContratoAsync(Contrato, "put", Ruta);
         var editada = (await respuesta.Content.ReadFromJsonAsync<EntregaDto>())!;
-        Assert.Equal((entrega.Id, "v2.png", 10L, "ENVIADA"), (editada.Id, editada.NombreArchivo, editada.Tamano, editada.Estado));
+        var archivo = Assert.Single(editada.Archivos);
+        Assert.Equal((entrega.Id, "v2.png", 10L, "ENVIADA"), (editada.Id, archivo.NombreArchivo, archivo.Tamano, editada.Estado));
         Assert.Equal(Api.Reloj.Ahora, editada.FechaEnvio);
         var (rutaNueva, blob) = Assert.Single(Api.Almacen.Blobs);
         Assert.NotEqual(rutaAnterior, rutaNueva);
@@ -53,7 +54,7 @@ public sealed class EditarAnularEntregaTests(EntregasFixture fixture) : PruebaEn
 
         Assert.Equal(entrega.Id, nueva.Id);
         var fila = Assert.Single(await FilasAsync());
-        Assert.Equal(("ENVIADA", "v2.pdf"), (fila.Estado.ToString(), fila.NombreArchivo));
+        Assert.Equal(("ENVIADA", "v2.pdf"), (fila.Estado.ToString(), Assert.Single(fila.Archivos).NombreArchivo));
     }
 
     [Fact]
@@ -67,7 +68,7 @@ public sealed class EditarAnularEntregaTests(EntregasFixture fixture) : PruebaEn
         Assert.Equal(HttpStatusCode.UnprocessableEntity, respuesta.StatusCode);
         Assert.Equal("FECHA_LIMITE_VENCIDA", (await ErrorDeAsync(respuesta)).Codigo);
         await respuesta.CumpleContratoAsync(Contrato, "put", Ruta);
-        Assert.Equal("v1.pdf", Assert.Single(await FilasAsync()).NombreArchivo);
+        Assert.Equal("v1.pdf", Assert.Single(Assert.Single(await FilasAsync()).Archivos).NombreArchivo);
         Assert.Single(Api.Almacen.Blobs);
     }
 

@@ -177,6 +177,8 @@ export const icono = {
   atras: 'm15 6-6 6 6 6',
   subir: 'M12 16V5M7 10l5-5 5 5M5 19h14',
   calendario: 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16M9 3v4M15 3v4',
+  descargar: 'M12 4v11M7 10l5 5 5-5M5 19h14',
+  quitar: 'M6 6l12 12M18 6 6 18',
 } as const;
 
 export function Icono({ d, tam = 20 }: { d: string; tam?: number }) {

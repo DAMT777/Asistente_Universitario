@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { NOTA_MAX, NOTA_MIN } from '@/domain/reglas';
+import { formatoTamano } from '@/domain/archivos';
 
 export const loginSchema = z.object({
   usuario: z.string().trim().min(1, 'Escribe tu usuario.'),
@@ -50,17 +51,32 @@ export const pesosCursoSchema = z.object({
 });
 export type PesosCursoInput = z.infer<typeof pesosCursoSchema>;
 
-/** Mismas reglas que el servicio de Entregas (que además valida la firma del contenido). */
+/**
+ * Mismas reglas y valores por defecto que el servicio de Entregas
+ * (Entregas__MaxBytes, Entregas__MaxBytesTotal, Entregas__MaxArchivos). El backend además valida la firma del contenido.
+ */
 export const EXTENSIONES_ENTREGA = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'png', 'jpg', 'jpeg'] as const;
-export const TAMANO_MAX_ENTREGA = 20 * 1024 * 1024;
+export const TAMANO_MAX_ARCHIVO = 20 * 1024 * 1024;
+export const TAMANO_MAX_ENTREGA = 50 * 1024 * 1024;
+export const MAX_ARCHIVOS_ENTREGA = 10;
 
-export const archivoEntregaSchema = z.object({
-  nombre: z
-    .string()
-    .refine((n) => EXTENSIONES_ENTREGA.some((e) => n.toLowerCase().endsWith('.' + e)), 'Formato no admitido. Usa PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG.'),
-  tamano: z.number().positive('El archivo está vacío.').max(TAMANO_MAX_ENTREGA, 'El archivo supera 20 MB.'),
-  datos: z.unknown().optional(),
-});
+export const archivoEntregaSchema = z
+  .object({ nombre: z.string(), tamano: z.number(), datos: z.unknown().optional() })
+  .superRefine((a, ctx) => {
+    if (!EXTENSIONES_ENTREGA.some((e) => a.nombre.toLowerCase().endsWith('.' + e)))
+      ctx.addIssue({ code: 'custom', path: ['nombre'], message: `"${a.nombre}": formato no admitido. Usa PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG.` });
+    else if (a.tamano <= 0)
+      ctx.addIssue({ code: 'custom', path: ['tamano'], message: `"${a.nombre}" está vacío.` });
+    else if (a.tamano > TAMANO_MAX_ARCHIVO)
+      ctx.addIssue({ code: 'custom', path: ['tamano'], message: `"${a.nombre}" supera ${formatoTamano(TAMANO_MAX_ARCHIVO)}.` });
+  });
+
+/** Todos los archivos de una entrega: cada uno válido, sin pasar la cantidad ni el total permitidos. */
+export const seleccionEntregaSchema = z
+  .array(archivoEntregaSchema)
+  .min(1, 'Elige al menos un archivo.')
+  .max(MAX_ARCHIVOS_ENTREGA, `Puedes entregar hasta ${MAX_ARCHIVOS_ENTREGA} archivos.`)
+  .refine((xs) => xs.reduce((s, a) => s + a.tamano, 0) <= TAMANO_MAX_ENTREGA, `Los archivos suman más de ${formatoTamano(TAMANO_MAX_ENTREGA)}.`);
 
 // Contratos de respuesta del backend (validación en el borde de la api).
 export const cursoSchema = z.object({
@@ -94,7 +110,9 @@ export const notasActividadesSchema = z.object({
 });
 export const entregaSchema = z.object({
   id: z.string(), actividadId: z.string(), estudianteId: z.string(), fechaEnvio: z.string(),
-  estado: z.enum(['ENVIADA', 'ANULADA']), nombreArchivo: z.string(), tamano: z.number(),
+  estado: z.enum(['ENVIADA', 'ANULADA']),
+  archivos: z.array(z.object({ id: z.string(), nombreArchivo: z.string(), tamano: z.number() })),
+  tamanoTotal: z.number(),
 });
 
 export const usuarioSchema = z.object({ id: z.string(), nombre: z.string(), codigo: z.string(), rol: z.enum(['estudiante', 'docente']) });

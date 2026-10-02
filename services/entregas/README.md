@@ -1,15 +1,18 @@
 # Servicio de Entregas (puerto 5003)
 
-CU-13 y CU-14 del rol ESTUDIANTE: subir, editar, anular y listar las entregas propias.
+CU-13 y CU-14 del rol ESTUDIANTE: entregar uno o varios archivos, reemplazarlos, anular, listar y descargar las entregas propias.
 Contrato: [`contracts/entregas.yaml`](../../contracts/entregas.yaml). Base de datos propia `entregas_db`; los archivos van a Blob Storage (Azurite en local), nunca a la base.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/actividades/{actividadId}/entregas` | Sube la entrega (multipart, campo `archivo`). 201. Si ya existe, reemplaza el archivo en la misma fila. |
-| PUT | `/entregas/{entregaId}` | Reemplaza el archivo mientras no venza la fecha. 200. |
+| POST | `/actividades/{actividadId}/entregas` | Entrega uno o varios archivos (multipart, un campo `archivo` por archivo). 201. Si ya existe, reemplaza sus archivos en la misma fila. |
+| PUT | `/entregas/{entregaId}` | Reemplaza todos los archivos mientras no venza la fecha. 200. |
 | DELETE | `/entregas/{entregaId}` | Anula la entrega mientras no venza la fecha. 200 con estado `ANULADA`. |
-| GET | `/mis-entregas?actividadId=` | Lista las entregas propias (filtro opcional). |
+| GET | `/mis-entregas?actividadId=` | Lista las entregas propias (filtro opcional), con sus archivos. |
+| GET | `/entregas/{entregaId}/archivos/{archivoId}` | Descarga un archivo propio con su nombre original (`Content-Disposition: attachment`), sea del tipo que sea. |
 | GET | `/health/live`, `/health/ready` | Salud (ready revisa SQL Server y Blob Storage). |
+
+Los archivos de cada entrega están en la tabla `ArchivoEntrega` (nombre original, tamaño, tipo, orden y ruta del blob). Si un archivo de la entrega es inválido no se guarda ninguno.
 
 Para cada subida, edición o anulación consulta a Evaluaciones (`GET /internal/actividades/{id}?estudianteId=`, con `X-Service-Key`, timeout de 3 s y sin reintentos). Si Evaluaciones no responde, devuelve 503 `SERVICIO_NO_DISPONIBLE`.
 
@@ -32,7 +35,9 @@ Para cada subida, edición o anulación consulta a Evaluaciones (`GET /internal/
 | `Services__EvaluacionesTimeoutSegundos` | `3` |
 | `Storage__ConnectionString` | `UseDevelopmentStorage=true` (Azurite local) |
 | `Storage__Container` | `entregas` |
-| `Entregas__MaxBytes` | `20971520` (20 MB) |
+| `Entregas__MaxBytes` | `20971520` (20 MB por archivo) |
+| `Entregas__MaxBytesTotal` | `52428800` (50 MB por entrega) |
+| `Entregas__MaxArchivos` | `10` (archivos por entrega) |
 | `Database__AplicarMigraciones` | `true` en Development; `false` por defecto |
 
 Entregas no tiene datos semilla: una entrega solo existe si su archivo se subió.
@@ -75,9 +80,16 @@ curl -s -X POST http://localhost:5003/actividades/d0000000-0000-0000-0000-000000
 # Mis entregas
 curl -s http://localhost:5003/mis-entregas -H "Authorization: Bearer $TOKEN"
 
-# CU-14: editar y anular (use el id que devolvió la subida)
+# Varios archivos en una entrega: un -F archivo=@... por archivo
+curl -s -X POST http://localhost:5003/actividades/d0000000-0000-0000-0000-000000000001/entregas \
+  -H "Authorization: Bearer $TOKEN" -F "archivo=@/tmp/taller.pdf" -F "archivo=@/tmp/anexo.pdf"
+
+# CU-14: editar (reemplaza todos los archivos) y anular (use el id que devolvió la subida)
 curl -s -X PUT http://localhost:5003/entregas/<entregaId> -H "Authorization: Bearer $TOKEN" -F "archivo=@/tmp/taller.pdf"
 curl -s -X DELETE http://localhost:5003/entregas/<entregaId> -H "Authorization: Bearer $TOKEN"
+
+# Descargar un archivo (use los id de "archivos" en la respuesta); -OJ lo guarda con su nombre original
+curl -s -OJ http://localhost:5003/entregas/<entregaId>/archivos/<archivoId> -H "Authorization: Bearer $TOKEN"
 ```
 
 Otros tokens: `generar-token.sh luis|marta|pedro|profesor`, `--expirado` y `--minutos n`.

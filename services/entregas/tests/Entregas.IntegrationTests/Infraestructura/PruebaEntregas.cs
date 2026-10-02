@@ -38,11 +38,19 @@ public abstract class PruebaEntregas(EntregasFixture fixture) : IAsyncLifetime
     protected HttpClient Ana => ClienteDe(UsuariosSemilla.Ana, nombre: "Ana");
     protected HttpClient Luis => ClienteDe(UsuariosSemilla.Luis, nombre: "Luis");
 
-    protected static MultipartFormDataContent Archivo(string nombre, byte[] datos)
+    protected static MultipartFormDataContent Archivo(string nombre, byte[] datos) => Archivos((nombre, datos));
+
+    /// <summary>Un campo "archivo" por cada archivo, como lo envía el navegador con input multiple.</summary>
+    protected static MultipartFormDataContent Archivos(params (string Nombre, byte[] Datos)[] archivos)
     {
-        var parte = new ByteArrayContent(datos);
-        parte.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        return new MultipartFormDataContent { { parte, "archivo", nombre } };
+        var formulario = new MultipartFormDataContent();
+        foreach (var (nombre, datos) in archivos)
+        {
+            var parte = new ByteArrayContent(datos);
+            parte.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            formulario.Add(parte, "archivo", nombre);
+        }
+        return formulario;
     }
 
     protected static byte[] Pdf(int tamano = 2048, byte relleno = 0x20)
@@ -71,7 +79,9 @@ public abstract class PruebaEntregas(EntregasFixture fixture) : IAsyncLifetime
     protected static async Task<ErrorDto> ErrorDeAsync(HttpResponseMessage respuesta)
         => (await respuesta.Content.ReadFromJsonAsync<ErrorDto>())!;
 
-    public sealed record EntregaDto(Guid Id, Guid ActividadId, Guid EstudianteId, DateTimeOffset FechaEnvio, string Estado, string NombreArchivo, long Tamano);
+    public sealed record EntregaDto(Guid Id, Guid ActividadId, Guid EstudianteId, DateTimeOffset FechaEnvio, string Estado, List<ArchivoDto> Archivos, long TamanoTotal);
+
+    public sealed record ArchivoDto(Guid Id, string NombreArchivo, long Tamano);
 
     public sealed record ErrorDto(int Status, string Codigo, string Mensaje, string TraceId);
 }

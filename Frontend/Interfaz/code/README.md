@@ -109,7 +109,7 @@ types ← schemas ← domain ← api ← hooks ← ui / features ← app
 | `useMisNotas()` | Estudiante | Matriz del backend (cortes publicados y definitiva parcial), actividades con su nota y su entrega |
 | `useNotasCurso(id)` | Estudiante | Lo mismo para un curso |
 | `useProximasEntregas(n)` | Estudiante | Próximas actividades ordenadas por fecha |
-| `useEntrega(actividadId)` | Estudiante | Estado, `abierta`, `entregar(archivo)` (sube o reemplaza) y `anular()` |
+| `useEntrega(actividadId)` | Estudiante | Estado, `abierta`, `entregar(archivos)` (sube o reemplaza), `anular()` y `descargar(archivoId)` |
 | `useCalificaciones(cursoId, actividadId)` | Docente | Filas por estudiante, conteos, `guardar()` (borrador o publicar) y `publicarBorradores()` |
 | `usePonderado(cursoId)` | Docente | Borrador de pesos, validación en vivo (cada grupo suma 100) y acumulado por estudiante |
 | `usePendientesDocente()` | Docente | Actividades con entregas sin calificar o en borrador |
@@ -122,7 +122,9 @@ types ← schemas ← domain ← api ← hooks ← ui / features ← app
 - Cada curso define los pesos de sus tres cortes, que suman 100. Las actividades de cada corte también suman 100.
 - Para el estudiante, la nota de cada corte y la definitiva parcial las calcula el backend sobre los cortes publicados; el frontend no las recalcula. En la api simulada se calculan con `domain/ponderado.ts`.
 - El estudiante no ve los borradores: para él, una actividad en borrador aparece como "Entregada" o "Pendiente".
-- Las entregas se cierran en la fecha límite o cuando la actividad ya está calificada. Mientras siga abierta, la entrega se puede reemplazar o anular. Se admiten PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG de hasta 20 MB; el backend además revisa que el contenido corresponda a la extensión.
+- Las entregas se cierran en la fecha límite o cuando la actividad ya está calificada. Mientras siga abierta, la entrega se puede reemplazar o anular.
+- Una entrega tiene uno o varios archivos: se eligen, se revisan en la lista (se pueden quitar o agregar más) y solo se envían al pulsar **Entregar**. Se admiten PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG; hasta 10 archivos, 20 MB por archivo y 50 MB en total. El backend además revisa que el contenido corresponda a la extensión.
+- Al hacer clic en un archivo entregado se descarga con su nombre original, sea del tipo que sea.
 - Si el docente edita una nota publicada, vuelve a borrador hasta que la publique de nuevo.
 - La nota aprobatoria (3.0) se inyecta en `ApiProvider`.
 

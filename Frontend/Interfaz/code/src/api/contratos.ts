@@ -1,4 +1,4 @@
-import type { Actividad, ArchivoEntrega, Calificacion, Curso, Entrega, MatrizNotas, NotasActividades, Rol, Sesion, Usuario } from '@/types';
+import type { Actividad, ArchivoDescargado, ArchivoEntrega, Calificacion, Curso, Entrega, MatrizNotas, NotasActividades, Rol, Sesion, Usuario } from '@/types';
 
 /**
  * Contrato único que consumen los hooks. Hay dos implementaciones:
@@ -36,12 +36,14 @@ export interface ApiClient {
     notasCurso(cursoId: string): Promise<NotasActividades>;
     /** GET /mis-entregas: entregas propias, enviadas y anuladas. */
     misEntregas(): Promise<Entrega[]>;
-    /** POST /actividades/{id}/entregas. Si ya existía una entrega (aun anulada), se reutiliza. */
-    subirEntrega(actividadId: string, archivo: ArchivoEntrega): Promise<Entrega>;
-    /** PUT /entregas/{id}: reemplaza el archivo mientras no venza la fecha. */
-    editarEntrega(entregaId: string, archivo: ArchivoEntrega): Promise<Entrega>;
+    /** POST /actividades/{id}/entregas con uno o varios archivos. Si ya existía una entrega (aun anulada), se reutiliza. */
+    subirEntrega(actividadId: string, archivos: ArchivoEntrega[]): Promise<Entrega>;
+    /** PUT /entregas/{id}: reemplaza todos los archivos mientras no venza la fecha. */
+    editarEntrega(entregaId: string, archivos: ArchivoEntrega[]): Promise<Entrega>;
     /** DELETE /entregas/{id}: anula mientras no venza la fecha. */
     anularEntrega(entregaId: string): Promise<Entrega>;
+    /** GET /entregas/{id}/archivos/{archivoId}: contenido con su nombre original. */
+    descargarArchivo(entregaId: string, archivoId: string): Promise<ArchivoDescargado>;
   };
 }
 

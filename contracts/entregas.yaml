@@ -19,8 +19,8 @@ paths:
   /actividades/{actividadId}/entregas:
     post:
       operationId: subirEntrega
-      summary: "CU-13. Sube la entrega de una actividad antes de su fecha límite."
-      description: "RN-04, RN-05, RN-07, RN-16. Si ya existe una entrega del estudiante para la actividad (enviada o anulada) se reutiliza la misma fila y se reemplaza el archivo."
+      summary: "CU-13. Entrega uno o varios archivos de una actividad antes de su fecha límite."
+      description: "RN-04, RN-05, RN-07, RN-16. Si ya existe una entrega del estudiante para la actividad (enviada o anulada) se reutiliza la misma fila y se reemplazan sus archivos. Todos los archivos se validan antes de guardar: si uno falla no se guarda ninguno."
       tags: [Entregas]
       parameters:
         - $ref: "#/components/parameters/ActividadId"
@@ -56,8 +56,8 @@ paths:
   /entregas/{entregaId}:
     put:
       operationId: editarEntrega
-      summary: "CU-14. Reemplaza el archivo de la entrega mientras no venza la fecha límite."
-      description: "RN-06, RN-07. Actualiza fechaEnvio, nombreArchivo y tamano. Una entrega ajena responde 404."
+      summary: "CU-14. Reemplaza los archivos de la entrega mientras no venza la fecha límite."
+      description: "RN-06, RN-07. El conjunto enviado reemplaza todos los archivos anteriores y actualiza fechaEnvio. Una entrega ajena responde 404."
       tags: [Entregas]
       parameters:
         - $ref: "#/components/parameters/EntregaId"
@@ -116,6 +116,31 @@ paths:
           $ref: "#/components/responses/ReglaIncumplida"
         "503":
           $ref: "#/components/responses/ServicioNoDisponible"
+  /entregas/{entregaId}/archivos/{archivoId}:
+    get:
+      operationId: descargarArchivo
+      summary: Descarga un archivo de una entrega propia con su nombre original.
+      description: "Responde el contenido con Content-Type del archivo y Content-Disposition attachment (filename*=UTF-8). Disponible aunque la fecha límite haya vencido. Un archivo o una entrega ajena responde 404."
+      tags: [Entregas]
+      parameters:
+        - $ref: "#/components/parameters/EntregaId"
+        - $ref: "#/components/parameters/ArchivoId"
+      responses:
+        "200":
+          description: Contenido del archivo.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/ValidacionFallida"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
   /mis-entregas:
     get:
       operationId: listarMisEntregas
@@ -186,19 +211,28 @@ components:
       schema:
         type: string
         format: uuid
+    ArchivoId:
+      name: archivoId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     ArchivoEntrega:
       type: object
       required: [archivo]
       properties:
         archivo:
-          type: string
-          format: binary
-          description: "PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ZIP, PNG o JPG. Se valida extensión y firma del contenido. Máximo Entregas__MaxBytes (20 MB por defecto)."
+          type: array
+          description: "Un campo archivo por cada archivo. PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ZIP, PNG o JPG; se valida extensión y firma del contenido. Límites configurables: Entregas__MaxBytes por archivo (20 MB), Entregas__MaxBytesTotal en total (50 MB) y Entregas__MaxArchivos (10)."
+          items:
+            type: string
+            format: binary
     Entrega:
       type: object
       additionalProperties: false
-      required: [id, actividadId, estudianteId, fechaEnvio, estado, nombreArchivo, tamano]
+      required: [id, actividadId, estudianteId, fechaEnvio, estado, archivos, tamanoTotal]
       properties:
         id:
           type: string
@@ -216,6 +250,24 @@ components:
         estado:
           type: string
           enum: [ENVIADA, ANULADA]
+        archivos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchivoDeEntrega"
+        tamanoTotal:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Suma en bytes de los archivos de la entrega.
+    ArchivoDeEntrega:
+      type: object
+      additionalProperties: false
+      required: [id, nombreArchivo, tamano]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Se usa para descargarlo en /entregas/{entregaId}/archivos/{archivoId}.
         nombreArchivo:
           type: string
           maxLength: 255
@@ -241,7 +293,7 @@ components:
           description: Igual al encabezado X-Correlation-Id de la respuesta.
   responses:
     ValidacionFallida:
-      description: VALIDACION_FALLIDA. Falta el archivo, está vacío o un parámetro no es válido.
+      description: "VALIDACION_FALLIDA. No hay archivos, alguno está vacío, hay más de Entregas__MaxArchivos o un parámetro no es válido."
       content:
         application/problem+json:
           schema:
@@ -265,7 +317,7 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
     ArchivoDemasiadoGrande:
-      description: ARCHIVO_DEMASIADO_GRANDE.
+      description: ARCHIVO_DEMASIADO_GRANDE. Un archivo supera Entregas__MaxBytes o la suma supera Entregas__MaxBytesTotal.
       content:
         application/problem+json:
           schema:

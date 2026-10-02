@@ -10,7 +10,10 @@ namespace Entregas.IntegrationTests.Infraestructura;
 /// <summary>El servicio real con SQL Server real; el almacén de archivos y el reloj son dobles.</summary>
 public sealed class EntregasApiFactory(string cadenaSql, LlavesPrueba llaves, string? urlEvaluaciones) : WebApplicationFactory<Program>
 {
+    /// <summary>Límites pequeños para probar 413 y la cantidad máxima sin archivos enormes.</summary>
     public const long MaxBytesPrueba = 64 * 1024;
+    public const long MaxBytesTotalPrueba = 160 * 1024;
+    public const int MaxArchivosPrueba = 3;
     public const string ClaveServicio = "clave-de-servicio-solo-para-pruebas";
 
     public RelojFijo Reloj { get; } = new(RelojFijo.AhoraTruncado());
@@ -27,6 +30,8 @@ public sealed class EntregasApiFactory(string cadenaSql, LlavesPrueba llaves, st
         builder.UseSetting("Services:EvaluacionesBaseUrl", urlEvaluaciones ?? "http://evaluaciones.invalid");
         builder.UseSetting("Storage:ConnectionString", "UseDevelopmentStorage=true");
         builder.UseSetting("Entregas:MaxBytes", MaxBytesPrueba.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.UseSetting("Entregas:MaxBytesTotal", MaxBytesTotalPrueba.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.UseSetting("Entregas:MaxArchivos", MaxArchivosPrueba.ToString(System.Globalization.CultureInfo.InvariantCulture));
         builder.UseSetting("Database:AplicarMigraciones", "true");
 
         builder.ConfigureTestServices(s =>

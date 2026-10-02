@@ -20,13 +20,14 @@ public sealed class SubirEntregaTests(EntregasFixture fixture) : PruebaEntregas(
 
         var fila = Assert.Single(await FilasAsync());
         Assert.Equal(("ENVIADA", UsuariosSemilla.Ana, UsuariosSemilla.Taller1), (fila.Estado.ToString(), fila.EstudianteId, fila.ActividadId));
-        Assert.Equal("Taller 1 - Ana.pdf", fila.NombreArchivo);
-        Assert.Equal(2048, fila.Tamano);
+        var archivo = Assert.Single(fila.Archivos);
+        Assert.Equal("Taller 1 - Ana.pdf", archivo.NombreArchivo);
+        Assert.Equal(2048, archivo.Tamano);
         Assert.Equal(Api.Reloj.Ahora.UtcDateTime, fila.FechaEnvio);
 
         // El blob usa una ruta basada en GUID, nunca el nombre original.
         var (ruta, blob) = Assert.Single(Api.Almacen.Blobs);
-        Assert.Equal(ruta, fila.RutaBlob);
+        Assert.Equal(ruta, archivo.RutaBlob);
         Assert.Matches($"^{UsuariosSemilla.Taller1}/{UsuariosSemilla.Ana}/[0-9a-f-]{{36}}$", ruta);
         Assert.Equal("application/pdf", blob.ContentType);
         Assert.Equal(2048, blob.Datos.Length);
@@ -105,7 +106,8 @@ public sealed class SubirEntregaTests(EntregasFixture fixture) : PruebaEntregas(
 
         Assert.Equal(primera.Id, segunda.Id);
         var fila = Assert.Single(await FilasAsync());
-        Assert.Equal(("v2.pdf", 4096L), (fila.NombreArchivo, fila.Tamano));
+        var archivo = Assert.Single(fila.Archivos);
+        Assert.Equal(("v2.pdf", 4096L), (archivo.NombreArchivo, archivo.Tamano));
         Assert.Equal(Api.Reloj.Ahora.UtcDateTime, fila.FechaEnvio);
         var (rutaV2, _) = Assert.Single(Api.Almacen.Blobs);
         Assert.NotEqual(rutaV1, rutaV2);

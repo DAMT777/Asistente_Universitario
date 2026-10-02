@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<EditarEntrega>();
         services.AddScoped<AnularEntrega>();
         services.AddScoped<ListarMisEntregas>();
+        services.AddScoped<DescargarArchivo>();
         return services;
     }
 }

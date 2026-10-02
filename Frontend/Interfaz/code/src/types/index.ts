@@ -132,6 +132,12 @@ export interface NotasActividades {
   actividades: NotaActividad[];
 }
 
+export interface ArchivoDeEntrega {
+  id: string;
+  nombreArchivo: string;
+  tamano: number;
+}
+
 export interface Entrega {
   id: string;
   actividadId: string;
@@ -139,6 +145,14 @@ export interface Entrega {
   /** Instante UTC (ISO 8601). */
   fechaEnvio: string;
   estado: 'ENVIADA' | 'ANULADA';
-  nombreArchivo: string;
-  tamano: number;
+  /** En el orden en que se subieron. */
+  archivos: ArchivoDeEntrega[];
+  tamanoTotal: number;
+}
+
+/** Archivo descargado, listo para guardar con su nombre original. */
+export interface ArchivoDescargado {
+  nombre: string;
+  /** Blob en web y en React Native (fetch().blob()). */
+  datos: Blob;
 }

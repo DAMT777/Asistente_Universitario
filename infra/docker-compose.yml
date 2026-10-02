@@ -70,6 +70,8 @@ services:
       Storage__ConnectionString: "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://azurite"
       Storage__Container: entregas
       Entregas__MaxBytes: "20971520"
+      Entregas__MaxBytesTotal: "52428800"
+      Entregas__MaxArchivos: "10"
       Database__AplicarMigraciones: "true"
     ports:
       - "5003:8080"

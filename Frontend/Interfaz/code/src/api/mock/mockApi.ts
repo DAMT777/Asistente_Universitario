@@ -1,4 +1,6 @@
 import type { ArchivoEntrega, Calificacion, Entrega, NotaActividad, Sesion, Usuario } from '@/types';
+
+interface ArchivoGuardado { id: string; nombre: string; tamano: number; datos: Blob }
 import { resumenCurso } from '@/domain';
 import { ApiError, type ApiClient } from '../contratos';
 import { ACTIVIDADES, CURSOS, DOCENTE, ESTUDIANTES, calificacionesIniciales } from './seed';
@@ -18,7 +20,8 @@ export function createMockApi(cfg: MockConfig): ApiClient {
   let usuario: Usuario | null = null;
   /** Entregas anuladas (actividadId:estudianteId); la calificación conserva el nombre del archivo. */
   const anuladas = new Set<string>();
-  const tamanos = new Map<string, number>();
+  /** Archivos de cada entrega en memoria, para poder descargarlos. */
+  const archivos = new Map<string, ArchivoGuardado[]>();
   const espera = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(structuredClone(v)), cfg.latenciaMs ?? 250));
   const buscar = (a: string, e: string) => db.califs.find((c) => c.actividadId === a && c.estudianteId === e);
   const exigirDocente = () => {
@@ -32,13 +35,26 @@ export function createMockApi(cfg: MockConfig): ApiClient {
   const limite = (vence: string) => new Date(`${vence}T23:59:59`).toISOString();
   const clave = (actividadId: string, estudianteId: string) => `${actividadId}:${estudianteId}`;
 
+  /** Las entregas de la semilla solo traen el nombre: se les da un contenido de ejemplo para poder descargarlas. */
+  const archivosDe = (c: Calificacion): ArchivoGuardado[] => {
+    const k = clave(c.actividadId, c.estudianteId);
+    if (!archivos.has(k) && c.archivo) {
+      const datos = new Blob([`Archivo de ejemplo de la api simulada: ${c.archivo}`], { type: 'text/plain' });
+      archivos.set(k, [{ id: `arch-${k}-0`, nombre: c.archivo, tamano: datos.size, datos }]);
+    }
+    return archivos.get(k) ?? [];
+  };
+
   const entregaDe = (c: Calificacion): Entrega | null => {
     const k = clave(c.actividadId, c.estudianteId);
     const estado = c.entregado ? 'ENVIADA' : anuladas.has(k) ? 'ANULADA' : null;
-    if (!estado || !c.archivo) return null;
+    const propios = archivosDe(c);
+    if (!estado || propios.length === 0) return null;
     return {
-      id: `ent-${k}`, actividadId: c.actividadId, estudianteId: c.estudianteId, estado, nombreArchivo: c.archivo,
-      fechaEnvio: new Date(`${c.entregado ?? cfg.hoy()}T12:00:00`).toISOString(), tamano: tamanos.get(k) ?? 1024,
+      id: `ent-${k}`, actividadId: c.actividadId, estudianteId: c.estudianteId, estado,
+      fechaEnvio: new Date(`${c.entregado ?? cfg.hoy()}T12:00:00`).toISOString(),
+      archivos: propios.map((a) => ({ id: a.id, nombreArchivo: a.nombre, tamano: a.tamano })),
+      tamanoTotal: propios.reduce((s, a) => s + a.tamano, 0),
     };
   };
 
@@ -49,17 +65,21 @@ export function createMockApi(cfg: MockConfig): ApiClient {
     if (act.vence < cfg.hoy()) throw new ApiError(422, 'La fecha límite de la actividad ya venció.', 'FECHA_LIMITE_VENCIDA');
   };
 
-  const guardarArchivo = (actividadId: string, u: Usuario, archivo: ArchivoEntrega): Entrega => {
+  const guardarArchivos = (actividadId: string, u: Usuario, nuevos: ArchivoEntrega[]): Entrega => {
     exigirVigente(actividadId);
     let c = buscar(actividadId, u.id);
     if (!c) {
       c = { actividadId, estudianteId: u.id, entregado: null, archivo: null, nota: null, estado: null, retro: '' };
       db.califs.push(c);
     }
+    const k = clave(actividadId, u.id);
     c.entregado = cfg.hoy();
-    c.archivo = archivo.nombre;
-    anuladas.delete(clave(actividadId, u.id));
-    tamanos.set(clave(actividadId, u.id), archivo.tamano);
+    c.archivo = nuevos.map((a) => a.nombre).join(', ');
+    anuladas.delete(k);
+    archivos.set(k, nuevos.map((a, i) => ({
+      id: `arch-${k}-${Date.now()}-${i}`, nombre: a.nombre, tamano: a.tamano,
+      datos: a.datos instanceof Blob ? a.datos : new Blob([], { type: 'application/octet-stream' }),
+    })));
     return entregaDe(c)!;
   };
 
@@ -154,12 +174,12 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         const u = exigirEstudiante();
         return espera(db.califs.filter((c) => c.estudianteId === u.id).map(entregaDe).filter((e): e is Entrega => e != null));
       },
-      async subirEntrega(actividadId, archivo) {
-        return espera(guardarArchivo(actividadId, exigirEstudiante(), archivo));
+      async subirEntrega(actividadId, nuevos) {
+        return espera(guardarArchivos(actividadId, exigirEstudiante(), nuevos));
       },
-      async editarEntrega(entregaId, archivo) {
+      async editarEntrega(entregaId, nuevos) {
         const u = exigirEstudiante();
-        return espera(guardarArchivo(buscarEntrega(entregaId, u).actividadId, u, archivo));
+        return espera(guardarArchivos(buscarEntrega(entregaId, u).actividadId, u, nuevos));
       },
       async anularEntrega(entregaId) {
         const u = exigirEstudiante();
@@ -168,6 +188,12 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         c.entregado = null;
         anuladas.add(clave(c.actividadId, u.id));
         return espera(entregaDe(c)!);
+      },
+      async descargarArchivo(entregaId, archivoId) {
+        const a = archivosDe(buscarEntrega(entregaId, exigirEstudiante())).find((x) => x.id === archivoId);
+        if (!a) throw new ApiError(404, 'El archivo no existe.', 'NO_ENCONTRADO');
+        // Sin structuredClone: el Blob se entrega tal cual.
+        return new Promise((r) => setTimeout(() => r({ nombre: a.nombre, datos: a.datos }), cfg.latenciaMs ?? 250));
       },
     },
   };

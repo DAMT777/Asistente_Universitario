@@ -4,15 +4,15 @@ using Entregas.Application.Puertos;
 namespace Entregas.Application.Comun;
 
 /// <summary>
-/// Guarda los cambios de la entrega manteniendo coherentes BD y blob:
-/// si la BD falla se borra el blob nuevo; si la BD confirma se borra el blob reemplazado.
+/// Guarda los cambios de la entrega manteniendo coherentes BD y blobs:
+/// si la BD falla se borran los blobs nuevos; si la BD confirma se borran los blobs reemplazados.
 /// </summary>
 public sealed class PersistenciaConCompensacion(
     IEntregaRepositorio repositorio,
     IAlmacenArchivos almacen,
     ILogger<PersistenciaConCompensacion> logger)
 {
-    public async Task GuardarAsync(string rutaNueva, string? rutaReemplazada, CancellationToken ct)
+    public async Task GuardarAsync(IReadOnlyCollection<string> rutasNuevas, IReadOnlyCollection<string> rutasReemplazadas, CancellationToken ct)
     {
         try
         {
@@ -20,25 +20,25 @@ public sealed class PersistenciaConCompensacion(
         }
         catch
         {
-            await EliminarSinFallarAsync(rutaNueva);
+            await EliminarSinFallarAsync(rutasNuevas);
             throw;
         }
 
-        if (rutaReemplazada is not null && rutaReemplazada != rutaNueva)
-        {
-            await EliminarSinFallarAsync(rutaReemplazada);
-        }
+        await EliminarSinFallarAsync(rutasReemplazadas.Except(rutasNuevas).ToList());
     }
 
-    private async Task EliminarSinFallarAsync(string ruta)
+    private async Task EliminarSinFallarAsync(IReadOnlyCollection<string> rutas)
     {
-        try
+        foreach (var ruta in rutas)
         {
-            await almacen.EliminarAsync(ruta, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "No se pudo eliminar el blob huérfano {RutaBlob}", ruta);
+            try
+            {
+                await almacen.EliminarAsync(ruta, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "No se pudo eliminar el blob huérfano {RutaBlob}", ruta);
+            }
         }
     }
 }

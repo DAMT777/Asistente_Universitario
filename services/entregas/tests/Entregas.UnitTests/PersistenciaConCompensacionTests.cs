@@ -13,9 +13,9 @@ public sealed class PersistenciaConCompensacionTests
         var almacen = new AlmacenRegistro();
         var persistencia = new PersistenciaConCompensacion(new RepositorioQueFalla(), almacen, NullLogger<PersistenciaConCompensacion>.Instance);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => persistencia.GuardarAsync("nuevo", "anterior", CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => persistencia.GuardarAsync(["nuevo1", "nuevo2"], ["anterior"], CancellationToken.None));
 
-        Assert.Equal(["nuevo"], almacen.Eliminados);
+        Assert.Equal(["nuevo1", "nuevo2"], almacen.Eliminados);
     }
 
     [Fact]
@@ -24,15 +24,16 @@ public sealed class PersistenciaConCompensacionTests
         var almacen = new AlmacenRegistro();
         var persistencia = new PersistenciaConCompensacion(new RepositorioQueConfirma(), almacen, NullLogger<PersistenciaConCompensacion>.Instance);
 
-        await persistencia.GuardarAsync("nuevo", "anterior", CancellationToken.None);
+        await persistencia.GuardarAsync(["nuevo"], ["anterior1", "anterior2"], CancellationToken.None);
 
-        Assert.Equal(["anterior"], almacen.Eliminados);
+        Assert.Equal(["anterior1", "anterior2"], almacen.Eliminados);
     }
 
     private sealed class AlmacenRegistro : IAlmacenArchivos
     {
         public List<string> Eliminados { get; } = [];
         public Task GuardarAsync(string ruta, Stream contenido, string contentType, CancellationToken ct) => Task.CompletedTask;
+        public Task<Stream?> AbrirAsync(string ruta, CancellationToken ct) => Task.FromResult<Stream?>(null);
         public Task EliminarAsync(string ruta, CancellationToken ct)
         {
             Eliminados.Add(ruta);

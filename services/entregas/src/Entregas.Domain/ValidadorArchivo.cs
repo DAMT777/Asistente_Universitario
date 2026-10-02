@@ -13,16 +13,16 @@ public static class ValidadorArchivo
         if (string.IsNullOrWhiteSpace(nombreOriginal) || nombreOriginal.Length > LongitudMaximaNombre)
             throw new ArchivoInvalidoException($"El nombre del archivo es obligatorio y admite hasta {LongitudMaximaNombre} caracteres.");
         if (tamano <= 0)
-            throw new ArchivoInvalidoException("El archivo está vacío.");
+            throw new ArchivoInvalidoException($"'{nombreOriginal}' está vacío.");
         if (tamano > maxBytes)
-            throw new ArchivoDemasiadoGrandeException(maxBytes);
+            throw new ArchivoDemasiadoGrandeException($"'{nombreOriginal}' supera el máximo de {LimitesEntrega.Megas(maxBytes)} por archivo.");
 
         var extension = Path.GetExtension(nombreOriginal).ToLowerInvariant();
         var tipo = TipoArchivo.Permitidos.FirstOrDefault(t => t.Extensiones.Contains(extension))
-                   ?? throw new TipoArchivoNoPermitidoException($"La extensión '{extension}' no está permitida.");
+                   ?? throw new TipoArchivoNoPermitidoException($"'{nombreOriginal}': la extensión '{extension}' no está permitida.");
 
         if (!tipo.CoincideFirma(cabecera))
-            throw new TipoArchivoNoPermitidoException($"El contenido del archivo no corresponde a un {tipo.Nombre}.");
+            throw new TipoArchivoNoPermitidoException($"El contenido de '{nombreOriginal}' no corresponde a un {tipo.Nombre}.");
 
         return tipo;
     }
