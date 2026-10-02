@@ -1,0 +1,61 @@
+### Prueba manual de CU-05 a CU-08 (extensión "REST Client" de VS Code o archivos .http de Rider).
+### Token del profesor semilla:  bash infra/scripts/generar-token-dev.sh   (desde la carpeta code/)
+@host = http://localhost:5002
+@token = PEGA_AQUI_EL_TOKEN
+@taller = d0000000-0000-0000-0000-000000000001
+@parcial = d0000000-0000-0000-0000-000000000002
+@ana = b0000000-0000-0000-0000-000000000001
+@marta = b0000000-0000-0000-0000-000000000003
+
+### CU-05: calificar una entrega con nota y retroalimentación
+PUT {{host}}/actividades/{{taller}}/calificaciones/{{marta}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "valor": 4.5, "retroalimentacion": "Buen análisis, falta justificar el supuesto 2.", "entregaId": "e0000000-0000-0000-0000-000000000001" }
+
+### CU-06: nota de un parcial (sin entrega). Un 0.0 es una nota válida.
+PUT {{host}}/actividades/{{parcial}}/calificaciones/{{marta}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "valor": 3.5, "retroalimentacion": "Sustentación aprobada." }
+
+### Ver las calificaciones de la actividad (trae la versión de cada una)
+GET {{host}}/actividades/{{parcial}}/calificaciones
+Authorization: Bearer {{token}}
+
+### CU-08: publicar todos los borradores de la actividad
+POST {{host}}/actividades/{{parcial}}/calificaciones/publicar
+Authorization: Bearer {{token}}
+
+### CU-08: publicar solo la nota de un estudiante
+POST {{host}}/actividades/{{parcial}}/calificaciones/publicar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "estudianteIds": ["{{marta}}"] }
+
+### CU-07: modificar una nota ya publicada (reclamo). Vuelve a borrador; hay que publicar de nuevo.
+### If-Match es opcional: pega la "version" que devolvió el GET.
+PUT {{host}}/actividades/{{parcial}}/calificaciones/{{ana}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+If-Match: "PEGA_AQUI_LA_VERSION"
+
+{ "valor": 3.8, "retroalimentacion": "Reclamo aceptado: el punto 3 estaba mal calificado." }
+
+### Errores esperados
+### 422 NOTA_FUERA_DE_RANGO
+PUT {{host}}/actividades/{{parcial}}/calificaciones/{{ana}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "valor": 5.5 }
+
+### 400 VALIDACION_FALLIDA (sin valor no se asume 0)
+PUT {{host}}/actividades/{{parcial}}/calificaciones/{{ana}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "retroalimentacion": "sin nota" }
