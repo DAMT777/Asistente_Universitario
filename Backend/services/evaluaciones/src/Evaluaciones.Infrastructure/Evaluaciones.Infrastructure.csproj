@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Evaluaciones.Application\Evaluaciones.Application.csproj" />
+  </ItemGroup>
+
+</Project>
