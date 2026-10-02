@@ -15,8 +15,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={mostrar}>
       {children}
       {msg && (
-        <div key={msg.id} role="status" style={{ position: 'fixed', left: '50%', bottom: 88, transform: 'translateX(-50%)', zIndex: 50, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(244,241,238,0.96)', color: colors.textoSobreClaro, fontSize: font.size.base, fontWeight: font.weight.semibold, padding: '12px 18px', borderRadius: 12, boxShadow: web.sombraToast, whiteSpace: 'nowrap', animation: `au-toast 260ms ${motion.easing} both` }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2FC59B' }} />
+        <div key={msg.id} role="status" style={{ position: 'fixed', left: '50%', bottom: 88, transform: 'translateX(-50%)', zIndex: 50, display: 'flex', alignItems: 'center', gap: 10, background: colors.blanco, border: `1px solid ${colors.linea}`, color: colors.textoSobreClaro, fontSize: font.size.base, fontWeight: font.weight.semibold, padding: '12px 18px', borderRadius: 12, boxShadow: web.sombraToast, maxWidth: 'calc(100vw - 32px)', whiteSpace: 'normal', animation: `au-toast 260ms ${motion.easing} both` }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: colors.exito, boxShadow: `0 0 0 4px rgba(14,150,110,0.14)` }} />
           {msg.texto}
         </div>
       )}

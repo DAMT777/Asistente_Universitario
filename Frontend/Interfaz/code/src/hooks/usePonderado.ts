@@ -15,10 +15,14 @@ interface Borrador {
 export function usePonderado(cursoId: string | undefined) {
   const { api, aprobatoria } = useApi();
   const qc = useQueryClient();
-  const curso = useCurso(cursoId).data;
-  const acts = useActividades(cursoId).data;
-  const ests = useEstudiantes(cursoId).data;
-  const califs = useQuery({ queryKey: qk.califsCurso(cursoId ?? ''), queryFn: () => api.calificaciones.porCurso(cursoId!), enabled: !!cursoId }).data;
+  const cursoQ = useCurso(cursoId);
+  const curso = cursoQ.data;
+  const actsQ = useActividades(cursoId);
+  const acts = actsQ.data;
+  const estsQ = useEstudiantes(cursoId);
+  const ests = estsQ.data;
+  const califsQ = useQuery({ queryKey: qk.califsCurso(cursoId ?? ''), queryFn: () => api.calificaciones.porCurso(cursoId!), enabled: !!cursoId });
+  const califs = califsQ.data;
 
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   useEffect(() => {
@@ -31,7 +35,7 @@ export function usePonderado(cursoId: string | undefined) {
     const grupos = ([1, 2, 3] as Corte[])
       .map((k) => ({ corte: k, actividades: acts.filter((a) => a.corte === k) }))
       .filter((g) => g.actividades.length)
-      .map((g) => ({ ...g, ...validarPesos(g.actividades.map((a) => borrador.actividades[a.id])) }));
+      .map((g) => ({ ...g, ...validarPesos(g.actividades.map((a) => borrador.actividades[a.id]), false) }));
     return { cortes, grupos, ok: cortes.ok && grupos.every((g) => g.ok) };
   }, [borrador, acts]);
 
@@ -45,11 +49,13 @@ export function usePonderado(cursoId: string | undefined) {
       cortes: borrador!.cortes.map(Number) as [number, number, number],
       actividades: Object.fromEntries(Object.entries(borrador!.actividades).map(([k, v]) => [k, Number(v)])),
     }),
-    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: qk.cursos }), qc.invalidateQueries({ queryKey: ['actividades'] })]),
+    onSettled: () => Promise.all([qc.invalidateQueries({ queryKey: qk.cursos }), qc.invalidateQueries({ queryKey: ['actividades'] })]),
   });
 
   const soloDigitos = (v: string) => v.replace(/[^\d]/g, '');
   return {
+    error: cursoQ.error ?? actsQ.error ?? estsQ.error ?? califsQ.error ?? mut.error,
+    refetch: () => { mut.reset(); return Promise.all([cursoQ.refetch(), actsQ.refetch(), estsQ.refetch(), califsQ.refetch()]); },
     curso,
     actividades: acts,
     borrador,
@@ -59,8 +65,7 @@ export function usePonderado(cursoId: string | undefined) {
     setPesoActividad: (id: string, v: string) => setBorrador((b) => b && { ...b, actividades: { ...b.actividades, [id]: soloDigitos(v) } }),
     guardar: async () => {
       if (!validacion?.ok) return false;
-      await mut.mutateAsync();
-      return true;
+      try { await mut.mutateAsync(); return true; } catch { return false; }
     },
     guardando: mut.isPending,
   };

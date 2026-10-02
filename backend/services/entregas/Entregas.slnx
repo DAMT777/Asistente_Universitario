@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Entregas.Api/Entregas.Api.csproj" />
+    <Project Path="src/Entregas.Application/Entregas.Application.csproj" />
+    <Project Path="src/Entregas.Domain/Entregas.Domain.csproj" />
+    <Project Path="src/Entregas.Infrastructure/Entregas.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Entregas.UnitTests/Entregas.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -3,9 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createHttpApi, createMockApi } from '@/api';
 import { ApiProvider, SesionProvider, type AlmacenSesion } from '@/hooks';
 import { ToastProvider } from '@/ui/Toast';
+import { Accesibilidad } from '@/ui/Accesibilidad';
 
 const API_URL = import.meta.env.VITE_API_URL as string | undefined;
-const HOY_DEMO = '2026-10-01';
+const HOY_DEMO = '2026-10-01T12:00:00-05:00';
 const CLAVE = 'aula.sesion';
 
 /** Almacén web. En React Native se reemplaza por AsyncStorage / SecureStore. */
@@ -25,7 +26,13 @@ export function Providers({ children }: { children: ReactNode }) {
   const [qc] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } } }));
   const entorno = useMemo(() => {
     if (API_URL) {
-      return { api: createHttpApi({ baseUrl: API_URL, getToken: () => JSON.parse(localStorage.getItem(CLAVE) ?? 'null')?.token ?? null }), hoy: undefined, almacen: almacenLocal };
+      // Sesión vencida o token inválido (CU-01): se borra la sesión y se vuelve al acceso con un aviso.
+      const onSesionVencida = () => {
+        if (!localStorage.getItem(CLAVE)) return;
+        localStorage.removeItem(CLAVE);
+        window.location.assign('/login?sesion=vencida');
+      };
+      return { api: createHttpApi({ baseUrl: API_URL, getToken: () => JSON.parse(localStorage.getItem(CLAVE) ?? 'null')?.token ?? null, onSesionVencida }), hoy: undefined, almacen: almacenLocal };
     }
     const hoy = () => HOY_DEMO;
     return { api: createMockApi({ hoy }), hoy, almacen: almacenMemoria() };
@@ -35,7 +42,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={qc}>
       <ApiProvider api={entorno.api} hoy={entorno.hoy}>
         <SesionProvider almacen={entorno.almacen}>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>{children}<Accesibilidad /></ToastProvider>
         </SesionProvider>
       </ApiProvider>
     </QueryClientProvider>

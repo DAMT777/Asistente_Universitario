@@ -1,8 +1,17 @@
-node_modules/
-dist/
+# Secretos y configuración local (guía técnica, sección 12.6)
 .env
-.env.local
+infra/keys/
+appsettings.*.local.json
+
+# .NET
 bin/
 obj/
-.vs/
 *.user
+TestResults/
+
+# Frontend
+node_modules/
+dist/
+
+# Archivos de entregas guardados en disco local durante el desarrollo
+almacen-entregas/

@@ -17,7 +17,8 @@ export function useEntrega(actividadId: string | undefined) {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.califs }),
   });
 
-  const abierta = item ? puedeEntregar(item.actividad.vence, hoy(), item.estado === 'calificada') : false;
+  const anularMut = useMutation({ mutationFn: () => api.calificaciones.anularEntrega(actividadId!), onSuccess: () => qc.invalidateQueries({ queryKey: qk.califs }) });
+  const abierta = item ? puedeEntregar(item.actividad.vence, hoy(), item.actividad.requiereEntrega) : false;
 
   /** Valida (formato y tamaño) y envía. Devuelve el mensaje de error, si hay. */
   async function entregar(archivo: ArchivoEntrega): Promise<string | null> {
@@ -31,5 +32,8 @@ export function useEntrega(actividadId: string | undefined) {
     }
   }
 
-  return { ...item, abierta, entregar, enviando: mut.isPending, isLoading: notas.isLoading, error: notas.error };
+  async function anular() {
+    try { await anularMut.mutateAsync(); return null; } catch(e) { return e instanceof Error ? e.message : 'No se pudo anular la entrega.'; }
+  }
+  return { ...item, anular, abierta, entregar, enviando: mut.isPending || anularMut.isPending, isLoading: notas.isLoading, error: notas.error };
 }

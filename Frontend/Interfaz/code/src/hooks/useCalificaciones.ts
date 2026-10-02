@@ -48,12 +48,14 @@ export function useCalificaciones(cursoId: string | undefined, actividadId: stri
   async function guardar(input: CalificacionInput): Promise<Record<string, string> | null> {
     const v = calificacionInputSchema.safeParse(input);
     if (!v.success) return erroresPorCampo(v.error);
-    await guardarMut.mutateAsync(v.data);
+    try { await guardarMut.mutateAsync(v.data); } catch (e) { return { _: e instanceof Error ? e.message : 'No se pudo guardar la nota.' }; }
     return null;
   }
 
   return {
+    refetch: () => Promise.all([acts.refetch(), ests.refetch(), califs.refetch()]),
     actividades: acts.data,
+    calificaciones: califs.data,
     actividad,
     filas,
     conteos,

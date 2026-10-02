@@ -7,14 +7,14 @@ export interface ValidacionPesos {
   ok: boolean;
 }
 
-/** Cada peso es entero > 0 y el grupo suma exactamente 100. */
-export function validarPesos(valores: Array<number | string>): ValidacionPesos {
-  const enteros = valores.every((p) => /^\d+$/.test(String(p)) && Number(p) > 0);
+/** Cada peso es entero > 0; los cortes suman 100 y las actividades admiten hasta 100. */
+export function validarPesos(valores: Array<number | string>, exacto = true): ValidacionPesos {
+  const enteros = valores.every((p) => /^\d+$/.test(String(p)) && Number(p) > 0 && Number(p) <= 100);
   const total = valores.reduce<number>((a, b) => a + (Number(b) || 0), 0);
-  return { total, ok: enteros && total === 100 };
+  return { total, ok: enteros && (exacto ? total === 100 : total <= 100) };
 }
 
-/** Un estudiante solo puede subir mientras no esté calificado y el plazo siga abierto. */
-export function puedeEntregar(vence: string, hoy: string, calificada: boolean): boolean {
-  return !calificada && vence >= hoy;
+/** Un estudiante puede subir, reemplazar o anular mientras el plazo siga abierto, incluso si existe nota. */
+export function puedeEntregar(vence: string, hoy: string, requiereEntrega: boolean): boolean {
+  return requiereEntrega && !!vence && Date.parse(hoy) <= Date.parse(vence);
 }

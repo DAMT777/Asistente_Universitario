@@ -4,14 +4,16 @@ export function estadoDocente(a: Actividad, c: Calificacion | undefined, hoy: st
   if (c?.estado === 'publicada') return 'publicada';
   if (c?.estado === 'borrador') return 'borrador';
   if (c?.entregado) return 'sin_calificar';
-  return a.vence < hoy ? 'vencida' : 'pendiente';
+  if (!a.requiereEntrega) return 'sin_calificar';
+  return a.vence && Date.parse(a.vence) < Date.parse(hoy) ? 'vencida' : 'pendiente';
 }
 
 /** El estudiante no distingue borrador de "sin calificar": ambos son "entregada". */
 export function estadoEstudiante(a: Actividad, c: Calificacion | undefined, hoy: string): EstadoEstudiante {
   if (c?.estado === 'publicada') return 'calificada';
   if (c?.entregado) return 'entregada';
-  return a.vence < hoy ? 'vencida' : 'pendiente';
+  if (!a.requiereEntrega) return 'pendiente';
+  return a.vence && Date.parse(a.vence) < Date.parse(hoy) ? 'vencida' : 'pendiente';
 }
 
 export const ETIQUETA_ESTADO: Record<EstadoDocente | EstadoEstudiante, string> = {
