@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import { flushSync } from 'react-dom';
 import { colors, font } from '@/theme/tokens';
 import { Icono, icono } from './index';
 import { conOnda } from './onda';
@@ -26,6 +27,15 @@ function aplicar(p: Prefs) {
   attr('data-au-enlaces', p.enlaces, 'subrayados');
   attr('data-au-espaciado', p.espaciado, 'amplio');
   attr('data-au-movimiento', p.movimiento, 'reducido');
+}
+
+/** Línea brillante que viaja justo sobre el borde de la ola mientras cambia el tema (estilos en global.css). */
+function crearCresta(direccion: 'baja' | 'sube') {
+  const cresta = document.createElement('div');
+  cresta.className = 'au-ola-cresta';
+  cresta.dataset.direccion = direccion;
+  cresta.setAttribute('aria-hidden', 'true');
+  return cresta;
 }
 
 /** Aplica las preferencias guardadas antes del primer render (evita que el modo nocturno parpadee). */
@@ -64,11 +74,22 @@ export function Accesibilidad() {
     const raizHtml = document.documentElement;
     const sinMovimiento = siguiente.movimiento || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } };
-    if (siguiente.oscuro !== p.oscuro && !sinMovimiento && typeof doc.startViewTransition === 'function') {
-      raizHtml.setAttribute('data-au-ola', siguiente.oscuro ? 'baja' : 'sube');
-      doc.startViewTransition(() => aplicar(siguiente)).finished.finally(() => raizHtml.removeAttribute('data-au-ola'));
+    if (siguiente.oscuro === p.oscuro || sinMovimiento || typeof doc.startViewTransition !== 'function') {
+      setP(siguiente);
+      return;
     }
-    setP(siguiente);
+    const direccion = siguiente.oscuro ? 'baja' : 'sube';
+    raizHtml.setAttribute('data-au-ola', direccion);
+    // El tema debe cambiar DENTRO de la transición, cuando el navegador ya capturó el estado anterior.
+    // Si React lo aplicara en el mismo clic, la captura saldría ya oscura y la ola no mostraría nada.
+    doc.startViewTransition(() => {
+      flushSync(() => setP(siguiente));
+      aplicar(siguiente);
+      document.body.appendChild(crearCresta(direccion));
+    }).finished.finally(() => {
+      raizHtml.removeAttribute('data-au-ola');
+      document.querySelectorAll('.au-ola-cresta').forEach((c) => c.remove());
+    });
   };
 
   const opciones: Array<{ k: Exclude<keyof Prefs, 'escala'>; etiqueta: string }> = [

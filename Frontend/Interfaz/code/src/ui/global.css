@@ -453,5 +453,25 @@ html[data-au-ola="sube"]::view-transition-new(root) {
   mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 220' preserveAspectRatio='none'><path d='M0 220H100V110Q87.5 120 75 110T50 110T25 110T0 110Z'/></svg>") 0 0 / 100% 220% no-repeat;
   animation: au-ola-sube 1100ms cubic-bezier(.65,0,.35,1) both;
 }
+/* Durante la ola nada cambia de color por su cuenta: todo el cambio lo hace la ola. */
+html[data-au-ola] *, html[data-au-ola] *::before, html[data-au-ola] *::after { transition: none !important; }
+
+/* Cresta: una línea brillante con la misma forma del borde de la máscara que viaja encima de él.
+   Tiene su propio view-transition-name, así se dibuja sobre todo y sin recortarse. Mide 24vh y su
+   centro coincide con el borde: va de -22vh a 98vh (baja) o al revés (sube), con la misma curva. */
+.au-ola-cresta {
+  position: fixed; top: 0; left: 0; right: 0; height: 24vh; pointer-events: none; z-index: 2147483647;
+  view-transition-name: au-ola-cresta;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 24' preserveAspectRatio='none'><g fill='none' vector-effect='non-scaling-stroke'><path d='M100 12Q87.5 2 75 12T50 12T25 12T0 12' stroke='rgba(227,6,29,0.22)' stroke-width='26' vector-effect='non-scaling-stroke'/><path d='M100 12Q87.5 2 75 12T50 12T25 12T0 12' stroke='rgba(255,74,92,0.55)' stroke-width='8' vector-effect='non-scaling-stroke'/><path d='M100 12Q87.5 2 75 12T50 12T25 12T0 12' stroke='rgba(255,255,255,0.95)' stroke-width='2.5' vector-effect='non-scaling-stroke'/></g></svg>") 0 0 / 100% 100% no-repeat;
+}
+.au-ola-cresta[data-direccion="sube"] {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 24' preserveAspectRatio='none'><g fill='none'><path d='M100 12Q87.5 22 75 12T50 12T25 12T0 12' stroke='rgba(227,6,29,0.22)' stroke-width='26' vector-effect='non-scaling-stroke'/><path d='M100 12Q87.5 22 75 12T50 12T25 12T0 12' stroke='rgba(255,74,92,0.55)' stroke-width='8' vector-effect='non-scaling-stroke'/><path d='M100 12Q87.5 22 75 12T50 12T25 12T0 12' stroke='rgba(255,255,255,0.95)' stroke-width='2.5' vector-effect='non-scaling-stroke'/></g></svg>");
+}
+::view-transition-new(au-ola-cresta) { animation: none; filter: drop-shadow(0 0 14px rgba(227,6,29,0.6)); }
+html[data-au-ola="baja"]::view-transition-group(au-ola-cresta) { animation: au-cresta-baja 1100ms cubic-bezier(.65,0,.35,1) both; }
+html[data-au-ola="sube"]::view-transition-group(au-ola-cresta) { animation: au-cresta-sube 1100ms cubic-bezier(.65,0,.35,1) both; }
+@keyframes au-cresta-baja { from { transform: translateY(-22vh); } to { transform: translateY(98vh); } }
+@keyframes au-cresta-sube { from { transform: translateY(98vh); } to { transform: translateY(-22vh); } }
+
 @keyframes au-ola-baja { from { -webkit-mask-position: 0 100%; mask-position: 0 100%; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
 @keyframes au-ola-sube { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: 0 100%; mask-position: 0 100%; } }
