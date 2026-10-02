@@ -63,4 +63,37 @@ describe('adaptador de los contratos de la guía técnica', () => {
     expect(fetchImpl.mock.calls[0][0]).toBe('/api/entregas/ent1/archivos/f2');
     expect(url).toMatch(/^blob:/);
   });
+  it('califica una entrega enviando nota, retroalimentación y entregaId (CU-05)', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(respuesta({ id: 'c1', actividadId: 'a1', estudianteId: 'e1', entregaId: 'ent1', valor: 4.5, retroalimentacion: 'Bien', estado: 'BORRADOR', version: null }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    const c = await api.calificaciones.guardar({ actividadId: 'a1', estudianteId: 'e1', nota: 4.5, retro: 'Bien', publicar: false, entregaId: 'ent1' });
+    expect(fetchImpl.mock.calls[0][0]).toBe('/api/actividades/a1/calificaciones/e1');
+    expect(fetchImpl.mock.calls[0][1].method).toBe('PUT');
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ valor: 4.5, retroalimentacion: 'Bien', entregaId: 'ent1' });
+    expect(c).toMatchObject({ nota: 4.5, estado: 'borrador' });
+  });
+  it('registra la nota de una actividad sin entrega sin enviar entregaId (CU-06)', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(respuesta({ actividadId: 'a2', estudianteId: 'e1', valor: 0, retroalimentacion: '', estado: 'BORRADOR' }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    const c = await api.calificaciones.guardar({ actividadId: 'a2', estudianteId: 'e1', nota: 0, retro: '', publicar: false });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ valor: 0, retroalimentacion: '' });
+    expect(c.nota).toBe(0);
+  });
+  it('muestra el mensaje del servicio cuando la nota está fuera de rango', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(respuesta({ status: 422, codigo: 'NOTA_FUERA_DE_RANGO', mensaje: 'La nota debe estar entre 0.0 y 5.0.' }, 422));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    await expect(api.calificaciones.guardar({ actividadId: 'a1', estudianteId: 'e1', nota: 7, retro: '', publicar: false })).rejects.toThrow('entre 0.0 y 5.0');
+  });
+  it('publica las calificaciones de la actividad y devuelve cuántas se publicaron (CU-08)', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(respuesta({ actividadId: 'a1', publicadas: 2 }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    expect(await api.calificaciones.publicarBorradores('a1')).toBe(2);
+    expect(fetchImpl.mock.calls[0][0]).toBe('/api/actividades/a1/calificaciones/publicar');
+    expect(fetchImpl.mock.calls[0][1].method).toBe('POST');
+  });
+  it('acepta fechaPublicacion nula en los cortes sin publicar de la matriz', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(respuesta({ id: 'e1', nombre: 'Ana', rol: 'ESTUDIANTE' })).mockResolvedValueOnce(respuesta({ cursos: [{ cursoId: 'c1', cortes: [{ corte: 1, pesoCorte: 30, nota: 3.2, publicado: true, fechaPublicacion: '2026-10-01T12:00:00Z' }, { corte: 2, pesoCorte: 30, nota: null, publicado: false, fechaPublicacion: null }], definitivaParcial: 1, esParcial: true }] }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    expect(await api.cortes.listar()).toEqual([{ cursoId: 'c1', estudianteId: 'e1', corte: 1, nota: 3.2, fechaPublicacion: '2026-10-01T12:00:00Z' }]);
+  });
 });

@@ -11,4 +11,6 @@ public static class CodigosError
     public const string ConflictoConcurrencia = "CONFLICTO_CONCURRENCIA";
     public const string CalificacionesEnBorrador = "CALIFICACIONES_EN_BORRADOR";
     public const string SinCalificaciones = "SIN_CALIFICACIONES";
+    public const string NotaFueraDeRango = "NOTA_FUERA_DE_RANGO";
+    public const string ActividadSinEntrega = "ACTIVIDAD_SIN_ENTREGA";
 }

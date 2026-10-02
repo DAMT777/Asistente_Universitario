@@ -57,6 +57,20 @@ internal sealed class CalificacionRepository(EvaluacionesDbContext db) : ICalifi
         await db.Calificaciones.AsNoTracking()
             .Where(c => c.EstudianteId == estudianteId && c.Estado == EstadoCalificacion.Publicada)
             .ToListAsync(ct);
+
+    // Con seguimiento: CalificarActividad y PublicarCalificacionesDeActividad las modifican.
+    public Task<Calificacion?> ObtenerCalificacionAsync(Guid actividadId, Guid estudianteId, CancellationToken ct) =>
+        db.Calificaciones.FirstOrDefaultAsync(c => c.ActividadId == actividadId && c.EstudianteId == estudianteId, ct);
+
+    public async Task<IReadOnlyList<Calificacion>> ListarBorradoresDeActividadAsync(Guid actividadId, CancellationToken ct) =>
+        await db.Calificaciones
+            .Where(c => c.ActividadId == actividadId && c.Estado == EstadoCalificacion.Borrador)
+            .ToListAsync(ct);
+
+    public void AgregarCalificacion(Calificacion calificacion) => db.Calificaciones.Add(calificacion);
+
+    public void ExigirVersion(Calificacion calificacion, byte[] versionEsperada) =>
+        db.Entry(calificacion).Property(c => c.Version).OriginalValue = versionEsperada;
 }
 
 internal sealed class PublicacionCorteRepository(EvaluacionesDbContext db) : IPublicacionCorteRepository

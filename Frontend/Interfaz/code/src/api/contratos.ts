@@ -28,7 +28,9 @@ export interface ApiClient {
     porActividad(actividadId: string): Promise<Calificacion[]>;
     porCurso(cursoId: string): Promise<Calificacion[]>;
     delEstudiante(estudianteId: string): Promise<Calificacion[]>;
-    guardar(input: { actividadId: string; estudianteId: string; nota: number; retro: string; publicar: boolean }): Promise<Calificacion>;
+    /** Crea o modifica la nota (CU-05, CU-06, CU-07). entregaId identifica la entrega calificada en CU-05. */
+    guardar(input: { actividadId: string; estudianteId: string; nota: number; retro: string; publicar: boolean; entregaId?: string }): Promise<Calificacion>;
+    /** CU-08. Publica los borradores de la actividad y devuelve cuántos se publicaron. */
     publicarBorradores(actividadId: string): Promise<number>;
     /** Uno o varios archivos. Si ya hay una entrega vigente, el conjunto la reemplaza. */
     entregar(actividadId: string, archivos: ArchivoEntrega[]): Promise<Calificacion>;

@@ -31,6 +31,17 @@ public interface ICalificacionRepository
 
     /// <summary>Calificaciones en estado PUBLICADA del estudiante, en cualquier curso (lo único que él puede ver).</summary>
     Task<IReadOnlyList<Calificacion>> ListarCalificacionesPublicadasAsync(Guid estudianteId, CancellationToken ct);
+
+    /// <summary>Calificación de un estudiante en una actividad, con seguimiento para modificarla (CU-07). Nula si está sin calificar.</summary>
+    Task<Calificacion?> ObtenerCalificacionAsync(Guid actividadId, Guid estudianteId, CancellationToken ct);
+
+    /// <summary>Calificaciones de la actividad en estado BORRADOR, con seguimiento para publicarlas (CU-08).</summary>
+    Task<IReadOnlyList<Calificacion>> ListarBorradoresDeActividadAsync(Guid actividadId, CancellationToken ct);
+
+    void AgregarCalificacion(Calificacion calificacion);
+
+    /// <summary>Exige que la versión guardada coincida con la que leyó el cliente (If-Match, sección 9.6).</summary>
+    void ExigirVersion(Calificacion calificacion, byte[] versionEsperada);
 }
 
 public interface IPublicacionCorteRepository

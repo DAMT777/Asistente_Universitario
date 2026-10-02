@@ -19,6 +19,14 @@
 - Los errores de Evaluaciones salen como `application/problem+json`, igual que en el resto de servicios.
 - Pendiente de alinear: en CU-12 un estudiante no inscrito recibe 404 y en CU-15 recibe 403 (RN-16).
 
+### C. Integración con la rama velez (CU-05 a CU-08)
+
+- Nuevos `PUT /actividades/{actividadId}/calificaciones/{estudianteId}` (body `{ valor, retroalimentacion, entregaId? }`, `If-Match` opcional, responde la calificación con `ETag`) y `POST /actividades/{actividadId}/calificaciones/publicar` (responde `{ actividadId, publicadas }`). Profesor dueño del curso (RN-15).
+- Códigos nuevos: `NOTA_FUERA_DE_RANGO` y `ACTIVIDAD_SIN_ENTREGA` (422).
+- Modificar una nota publicada la devuelve a `BORRADOR` hasta volver a publicar la actividad.
+- Se conservó `/mis-notas` según el contrato (CU-15 y CU-16); la versión de `velez` de esos endpoints no se trajo.
+- Pendiente: agregar estos dos endpoints a `contracts/evaluaciones.yaml`.
+
 ## Propuestas pendientes
 
 No se cambió en silencio ningún contrato. `contracts/entregas.yaml` y `contracts/evaluaciones.yaml` reflejan lo acordado.

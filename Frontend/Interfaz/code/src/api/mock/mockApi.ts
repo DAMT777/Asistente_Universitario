@@ -121,6 +121,7 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         return espera(db.califs.filter(c => c.estudianteId === id).map(c => c.estado === 'publicada' ? c : { ...c, nota: null, estado: null, retro: '' }));
       },
       async guardar({ actividadId, estudianteId, nota, retro, publicar }) {
+        // entregaId no se usa aquí: en el mock la entrega vive en la misma fila de la calificación.
         exigirDocente();
         if (!db.actividades.some(a => a.id === actividadId) || !ESTUDIANTES.some(e => e.id === estudianteId)) throw new ApiError(404, 'Actividad o estudiante no encontrado.');
         if (!Number.isFinite(nota) || nota < 0 || nota > 5) throw new ApiError(422, 'La nota debe estar entre 0.0 y 5.0.');
@@ -129,7 +130,10 @@ export function createMockApi(cfg: MockConfig): ApiClient {
           c = { actividadId, estudianteId, entregado: null, archivo: null, nota: null, estado: null, retro: '' };
           db.califs.push(c);
         }
-        Object.assign(c, { nota, retro, estado: publicar ? 'publicada' : 'borrador' } satisfies Partial<Calificacion>);
+        // Igual que el servicio: si no cambió nada conserva su estado; si cambió, vuelve a borrador (CU-07).
+        const texto = retro.trim();
+        if (!publicar && c.estado && c.nota === nota && c.retro === texto) return espera(c);
+        Object.assign(c, { nota, retro: texto, estado: publicar ? 'publicada' : 'borrador' } satisfies Partial<Calificacion>);
         return espera(c);
       },
       async publicarBorradores(actividadId) {

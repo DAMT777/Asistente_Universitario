@@ -1,7 +1,6 @@
 using Evaluaciones.Application.Abstracciones;
 using Evaluaciones.Application.Dtos;
 using Evaluaciones.Application.Internos;
-using Evaluaciones.Domain.Entidades;
 using Evaluaciones.Domain.Errores;
 
 namespace Evaluaciones.Application.CasosDeUso;
@@ -24,14 +23,7 @@ public sealed class ListarCalificacionesDeActividad(
 
         return (await calificaciones.ListarCalificacionesDelCursoAsync(actividad.CursoId, ct))
             .Where(c => c.ActividadId == actividadId)
-            .Select(c => new CalificacionDto(
-                c.ActividadId,
-                c.EstudianteId,
-                c.EntregaId,
-                c.Valor,
-                c.Retroalimentacion,
-                c.Estado.ComoTexto(),
-                c.Version is null ? null : Convert.ToBase64String(c.Version)))
+            .Select(c => c.ADto())
             .ToList();
     }
 }

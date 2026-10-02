@@ -33,6 +33,7 @@ public sealed record EstudianteInscritoDto(Guid Id, string Nombre, string Codigo
 /// <param name="Estado">BORRADOR o PUBLICADA.</param>
 /// <param name="Version">ROWVERSION en base64 (para If-Match).</param>
 public sealed record CalificacionDto(
+    Guid Id,
     Guid ActividadId,
     Guid EstudianteId,
     Guid? EntregaId,

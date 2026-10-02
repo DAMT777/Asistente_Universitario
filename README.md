@@ -12,7 +12,7 @@ Frontend (React, 5173) -> API Gateway (YARP, 5000) -> Usuarios (5001) · Evaluac
 | `Frontend/Interfaz/code/` | Aplicación web (React + Vite). Entra al backend solo por el gateway. |
 | `services/gateway/` | Punto único de entrada (YARP): valida el JWT, aplica CORS, bloquea `/internal/**` y enruta. |
 | `services/usuarios/` | Login (CU-01), `/auth/me` y emisión del JWT RS256. |
-| `services/evaluaciones/` | Cursos, actividades, ponderado y publicación de cortes (CU-09 a CU-12) y notas del estudiante (CU-15, CU-16). |
+| `services/evaluaciones/` | Cursos, actividades, calificaciones de actividad (CU-05 a CU-08), ponderado y publicación de cortes (CU-09 a CU-12) y notas del estudiante (CU-15, CU-16). |
 | `services/entregas/` | Entregas con uno o varios archivos en Blob Storage (CU-13, CU-14) y su consulta por el profesor. |
 | `services/compartido/` | `Unillanos.ServiceDefaults` (errores, JWT, correlación, health, logs) y `Unillanos.Pruebas.Compartidas` (ayudas de prueba y lector de contratos). |
 | `contracts/` | Contratos OpenAPI: la fuente de verdad de la API. Los cambios van en `CAMBIOS_CONTRATO.md`. |
@@ -49,7 +49,7 @@ Usuarios de prueba (contraseña `Demo1234!`, solo existen en desarrollo):
 
 | Código | Rol | Para probar |
 |--------|-----|-------------|
-| `P0001` | PROFESOR | Cursos, ponderado, publicar y corregir cortes, ver y descargar las entregas |
+| `P0001` | PROFESOR | Cursos, calificar y publicar notas de actividad, ponderado, publicar y corregir cortes, ver y descargar las entregas |
 | `E0001` | ESTUDIANTE | Ana: corte 1 publicado con 3.2 y definitiva parcial 1.0 |
 | `E0002` | ESTUDIANTE | Luis: tiene un borrador que no debe ver |
 | `E0003` | ESTUDIANTE | Marta: sin notas; entrega, reemplaza, anula y descarga en Taller 1 |
@@ -103,7 +103,8 @@ dotnet ef migrations add <Nombre> --output-dir Persistencia/Migraciones \
 | Profesor: ver y descargar las entregas de cada estudiante | Funciona |
 | Estudiante: inicio, cursos, notas y matriz por corte (CU-12, CU-15, CU-16) | Funciona |
 | Estudiante: entregar uno o varios archivos, reemplazar, anular y descargar (CU-13, CU-14) | Funciona |
-| Profesor: calificar, publicar notas de actividad (CU-05 a CU-08), crear actividades y pesos | Sin backend en esta rama |
+| Profesor: calificar, retroalimentar, modificar y publicar notas de actividad (CU-05 a CU-08) | Funciona |
+| Profesor: crear actividades y cambiar pesos | Sin backend todavía |
 
 ## Reglas del repositorio
 

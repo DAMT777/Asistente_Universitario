@@ -6,6 +6,8 @@ ASP.NET Core sobre .NET 10 con EF Core y SQL Server. Puerto local 5002.
 
 | CU | Endpoint | Caso de uso |
 |----|----------|-------------|
+| CU-05, CU-06, CU-07 | `PUT /actividades/{actividadId}/calificaciones/{estudianteId}` (profesor; `If-Match` opcional) | `CalificarActividad` |
+| CU-08 | `POST /actividades/{actividadId}/calificaciones/publicar` (profesor) | `PublicarCalificacionesDeActividad` |
 | CU-09 | `GET /cursos/{cursoId}/ponderado` y `GET /cursos/{cursoId}/ponderado/{estudianteId}` | `ConsultarPonderado` |
 | CU-10 | `POST /cursos/{cursoId}/cortes/{corte}/publicar` | `PublicarCorte` |
 | CU-11 | `PUT /cursos/{cursoId}/cortes/{corte}/estudiantes/{estudianteId}` | `CorregirCorte` |
@@ -13,11 +15,13 @@ ASP.NET Core sobre .NET 10 con EF Core y SQL Server. Puerto local 5002.
 | CU-15 | `GET /mis-notas/cursos/{cursoId}/actividades` (estudiante) | `ObtenerNotasActividades` |
 | CU-16 | `GET /mis-notas` (estudiante) | `ObtenerMatrizNotas` |
 
+CU-05 a CU-08 vienen de la rama `velez`. Calificar crea o modifica la nota y la retroalimentación del estudiante; toda nota nueva o modificada queda en `BORRADOR` y el estudiante no la ve hasta que se publica la actividad (CU-08), que pasa a `PUBLICADA` todos los borradores de esa actividad y responde cuántos publicó. Si la modificación no cambia nada, la calificación conserva su estado. La respuesta lleva `ETag`; si el cliente manda `If-Match` con otra versión recibe 409 `CONFLICTO_CONCURRENCIA`. Nota fuera de 0.0–5.0: 422 `NOTA_FUERA_DE_RANGO`; `entregaId` en una actividad sin entrega: 422 `ACTIVIDAD_SIN_ENTREGA`.
+
 CU-15 y CU-16 siguen `contracts/evaluaciones.yaml`: solo se leen calificaciones PUBLICADAS (un borrador o una actividad sin calificar salen como `SIN_CALIFICAR` con nota `null`), la nota de cada corte sale de `PublicacionCorte` y la definitiva parcial se calcula con `MotorPonderado` sobre los cortes publicados. Curso inexistente: 404; estudiante no inscrito: 403.
 
 Consulta interna para el servicio de entregas: `GET /internal/actividades/{actividadId}?estudianteId=` con el encabezado `X-Service-Key` (variable `ServiceKey`). Devuelve curso, profesor dueño, fecha límite (puede ser `null`), si requiere entrega y si el estudiante está inscrito. Sin llave configurada rechaza todo, y el gateway bloquea `/internal/**` desde fuera.
 
-Lecturas de apoyo que la pantalla del profesor necesita para CU-09, CU-10 y CU-11, y que en rigor son del frente B: `GET /cursos/{cursoId}/estudiantes` y `GET /actividades/{actividadId}/calificaciones`.
+Lecturas de apoyo que la pantalla del profesor necesita: `GET /cursos/{cursoId}/estudiantes` y `GET /actividades/{actividadId}/calificaciones`.
 
 ## Estructura
 
@@ -56,7 +60,7 @@ dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost,1433;Datab
 ## Comandos
 
 ```bash
-dotnet test Evaluaciones.slnx                        # 76 unitarias + 32 de integración (una usa SQL Server con Docker)
+dotnet test Evaluaciones.slnx                        # unitarias + integración (una usa SQL Server con Docker)
 dotnet run --project src/Evaluaciones.Api            # levanta en http://localhost:5002
 ```
 
@@ -70,4 +74,4 @@ dotnet run --project src/Evaluaciones.Api            # levanta en http://localho
 
 ## Pendiente de otros frentes
 
-El resto de endpoints de cursos, actividades y calificaciones del profesor (crear y editar actividades, pesos, calificar y publicar notas de actividad: CU-05 a CU-08). Esos endpoints aún no están en `contracts/evaluaciones.yaml`.
+Crear y editar actividades y cambiar los pesos de los cortes. Los endpoints de calificar y publicar (CU-05 a CU-08) todavía no están en `contracts/evaluaciones.yaml`.

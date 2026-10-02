@@ -16,7 +16,7 @@ const actividadDto = z.object({ id: z.string(), cursoId: z.string(), titulo: z.s
 const actividadRespuesta = z.union([actividadSchema, actividadDto]);
 const cursoDto = z.object({ id: z.string(), codigo: z.string(), nombre: z.string(), profesor: z.string().optional(), nombreProfesor: z.string().optional(), pesoCorte1: z.number(), pesoCorte2: z.number(), pesoCorte3: z.number(), periodo: z.string().default(''), creditos: z.number().default(0), grupo: z.number().default(1) }).transform(c => ({ ...c, docente: c.profesor ?? c.nombreProfesor ?? '', pesos: [c.pesoCorte1,c.pesoCorte2,c.pesoCorte3] as [number,number,number], monograma: c.nombre.split(' ').slice(0,2).map(x => x[0]).join(''), acento: 'rojo' as const }));
 const cursoRespuesta = z.union([cursoSchema, cursoDto]);
-const calificacionDto = z.object({ actividadId: z.string(), estudianteId: z.string().optional(), valor: z.number().nullable(), estado: z.enum(['BORRADOR', 'PUBLICADA']).nullable().optional(), retroalimentacion: z.string().nullable().default('') });
+const calificacionDto = z.object({ actividadId: z.string(), estudianteId: z.string().optional(), valor: z.number().nullable(), estado: z.enum(['BORRADOR', 'PUBLICADA']).nullable().optional(), retroalimentacion: z.string().nullish().transform(v => v ?? '') });
 // contracts/entregas.yaml: una entrega tiene uno o varios archivos.
 const entregaDto = z.object({ id: z.string(), actividadId: z.string(), estudianteId: z.string(), fechaEnvio: z.string(), estado: z.enum(['ENVIADA', 'ANULADA']), archivos: z.array(z.object({ id: z.string(), nombreArchivo: z.string(), tamano: z.number() })), tamanoTotal: z.number() });
 // contracts/evaluaciones.yaml (CU-15): solo las PUBLICADAS traen nota; un borrador llega como SIN_CALIFICAR.
@@ -89,7 +89,7 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
       async listar(cursoId) {
         const u = await identidad();
         if (u.rol === 'estudiante') {
-          const matriz = await req('GET', '/mis-notas', z.object({ cursos: z.array(z.object({ cursoId: z.string(), cortes: z.array(z.object({ corte: z.union([z.literal(1),z.literal(2),z.literal(3)]), nota: z.number().nullable(), publicado: z.boolean(), fechaPublicacion: z.string().optional() })) })) }));
+          const matriz = await req('GET', '/mis-notas', z.object({ cursos: z.array(z.object({ cursoId: z.string(), cortes: z.array(z.object({ corte: z.union([z.literal(1),z.literal(2),z.literal(3)]), nota: z.number().nullable(), publicado: z.boolean(), fechaPublicacion: z.string().nullish() })) })) }));
           return matriz.cursos.filter(c => !cursoId || c.cursoId === cursoId).flatMap(c => c.cortes.filter(k => k.publicado && k.nota !== null).map(k => ({ cursoId: c.cursoId, estudianteId: u.id, corte: k.corte, nota: k.nota!, fechaPublicacion: k.fechaPublicacion ?? '' })));
         }
         // La guía no fija el JSON de ponderado: integración propuesta documentada en README.
@@ -124,13 +124,14 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
       },
       async guardar(input) {
         if (input.publicar) throw new ApiError(422, 'Guarda el borrador y usa Publicar notas de actividad.');
-        await req('PUT', `/actividades/${input.actividadId}/calificaciones/${input.estudianteId}`, calificacionDto, { valor: input.nota, retroalimentacion: input.retro });
-        return { actividadId: input.actividadId, estudianteId: input.estudianteId, nota: input.nota, retro: input.retro, estado: 'borrador', entregado: null, archivo: null };
+        // CU-05, CU-06 y CU-07: crea o modifica la nota. El servicio la deja en borrador si cambió algo.
+        const c = await req('PUT', `/actividades/${input.actividadId}/calificaciones/${input.estudianteId}`, calificacionDto, { valor: input.nota, retroalimentacion: input.retro, ...(input.entregaId ? { entregaId: input.entregaId } : {}) });
+        return { actividadId: input.actividadId, estudianteId: input.estudianteId, nota: c.valor, retro: c.retroalimentacion, estado: c.estado === 'PUBLICADA' ? 'publicada' : 'borrador', entregado: null, archivo: null, entregaId: input.entregaId };
       },
       async publicarBorradores(id) {
-        const antes = (await porActividad(id)).filter(c => c.estado === 'borrador').length;
-        await req('POST', `/actividades/${id}/calificaciones/publicar`, vacio);
-        return antes;
+        // CU-08: el servicio responde cuántos borradores pasaron a publicada.
+        const r = await req('POST', `/actividades/${id}/calificaciones/publicar`, z.object({ publicadas: z.number() }));
+        return r.publicadas;
       },
       async anularEntrega(id) {
         const e = (await entregaPropia(id)).find(e => e.actividadId === id && e.estado === 'ENVIADA');

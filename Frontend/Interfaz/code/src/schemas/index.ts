@@ -24,6 +24,7 @@ export const calificacionInputSchema = z.object({
   nota: notaSchema,
   retro: z.string().max(2000, 'Máximo 2000 caracteres.').default(''),
   publicar: z.boolean(),
+  entregaId: z.string().optional(),
 });
 export type CalificacionInput = z.input<typeof calificacionInputSchema>;
 

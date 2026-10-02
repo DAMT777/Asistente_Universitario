@@ -1,7 +1,6 @@
 using Evaluaciones.Api.Seguridad;
 using Evaluaciones.Application.CasosDeUso;
 using Evaluaciones.Application.Dtos;
-using Evaluaciones.Domain.Errores;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -65,26 +64,9 @@ public sealed class CursosController(
     {
         var resultado = await corregirCorte.EjecutarAsync(
             User.ObtenerId(), cursoId, corte, estudianteId,
-            solicitud ?? new SolicitudCorregirCorte(), LeerVersionEsperada(), ct);
+            solicitud ?? new SolicitudCorregirCorte(), Request.LeerVersionEsperada(), ct);
 
-        if (resultado.Version is not null)
-            Response.Headers.ETag = $"\"{resultado.Version}\"";
-
+        Response.EscribirETag(resultado.Version);
         return Ok(resultado);
-    }
-
-    private byte[]? LeerVersionEsperada()
-    {
-        var valor = Request.Headers.IfMatch.ToString().Trim().Trim('"');
-        if (valor.Length == 0) return null;
-
-        try
-        {
-            return Convert.FromBase64String(valor);
-        }
-        catch (FormatException)
-        {
-            throw new DominioException(CodigosError.ValidacionFallida, "El encabezado If-Match no tiene un formato válido.");
-        }
     }
 }

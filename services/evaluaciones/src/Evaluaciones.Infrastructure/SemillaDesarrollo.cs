@@ -20,6 +20,10 @@ public static class SemillaDesarrollo
     public static readonly Guid Parcial1 = new("d0000000-0000-0000-0000-000000000002");
     public static readonly Guid Proyecto1 = new("d0000000-0000-0000-0000-000000000003");
 
+    // Entregas de demostración del servicio de entregas (mismos identificadores en los dos servicios).
+    public static readonly Guid EntregaTallerAna = new("e0000000-0000-0000-0000-000000000001");
+    public static readonly Guid EntregaTallerLuis = new("e0000000-0000-0000-0000-000000000002");
+
     public static async Task AplicarAsync(IServiceProvider servicios, TimeProvider reloj, CancellationToken ct = default)
     {
         using var alcance = servicios.CreateScope();
@@ -52,9 +56,9 @@ public static class SemillaDesarrollo
 
         // Ana: ambas publicadas y corte 1 ya publicado con 3.2. Luis: borrador (prueba RN-12). Marta: sin calificaciones.
         db.Calificaciones.AddRange(
-            new Calificacion { Id = Guid.NewGuid(), ActividadId = Taller1, EstudianteId = Ana, Valor = 4.0m, Retroalimentacion = "Buen trabajo.", Estado = EstadoCalificacion.Publicada },
+            new Calificacion { Id = Guid.NewGuid(), ActividadId = Taller1, EstudianteId = Ana, EntregaId = EntregaTallerAna, Valor = 4.0m, Retroalimentacion = "Buen trabajo.", Estado = EstadoCalificacion.Publicada },
             new Calificacion { Id = Guid.NewGuid(), ActividadId = Parcial1, EstudianteId = Ana, Valor = 3.0m, Retroalimentacion = "", Estado = EstadoCalificacion.Publicada },
-            new Calificacion { Id = Guid.NewGuid(), ActividadId = Taller1, EstudianteId = Luis, Valor = 2.5m, Retroalimentacion = "", Estado = EstadoCalificacion.Borrador });
+            new Calificacion { Id = Guid.NewGuid(), ActividadId = Taller1, EstudianteId = Luis, EntregaId = EntregaTallerLuis, Valor = 2.5m, Retroalimentacion = "", Estado = EstadoCalificacion.Borrador });
 
         db.PublicacionesCorte.Add(new PublicacionCorte
         {

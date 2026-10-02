@@ -60,6 +60,19 @@ public sealed class BaseEnMemoria :
         Task.FromResult<IReadOnlyList<Calificacion>>(
             Calificaciones.Where(c => c.EstudianteId == estudianteId && c.Estado == EstadoCalificacion.Publicada).ToList());
 
+    public byte[]? VersionExigidaCalificacion { get; private set; }
+
+    public Task<Calificacion?> ObtenerCalificacionAsync(Guid actividadId, Guid estudianteId, CancellationToken ct) =>
+        Task.FromResult(Calificaciones.FirstOrDefault(c => c.ActividadId == actividadId && c.EstudianteId == estudianteId));
+
+    public Task<IReadOnlyList<Calificacion>> ListarBorradoresDeActividadAsync(Guid actividadId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Calificacion>>(
+            Calificaciones.Where(c => c.ActividadId == actividadId && c.Estado == EstadoCalificacion.Borrador).ToList());
+
+    public void AgregarCalificacion(Calificacion calificacion) => Calificaciones.Add(calificacion);
+
+    public void ExigirVersion(Calificacion calificacion, byte[] versionEsperada) => VersionExigidaCalificacion = versionEsperada;
+
     public Task<IReadOnlyList<PublicacionCorte>> ListarPublicacionesDelEstudianteAsync(Guid estudianteId, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<PublicacionCorte>>(Publicaciones.Where(p => p.EstudianteId == estudianteId).ToList());
 

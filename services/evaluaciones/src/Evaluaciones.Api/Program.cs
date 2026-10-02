@@ -8,6 +8,7 @@ using Evaluaciones.Infrastructure;
 using Evaluaciones.Infrastructure.Persistencia;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -16,7 +17,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAplicacion();
 builder.Services.AddInfraestructura(builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddControllers();
+builder.Services.AddControllers().ConfigureApiBehaviorOptions(opciones =>
+{
+    // Un cuerpo mal formado (por ejemplo "valor": "abc") responde con el formato de error común (sección 8.2).
+    opciones.InvalidModelStateResponseFactory = contexto => new ObjectResult(new
+    {
+        status = StatusCodes.Status400BadRequest,
+        codigo = CodigosError.ValidacionFallida,
+        mensaje = "El cuerpo de la solicitud no tiene el formato esperado.",
+        traceId = System.Diagnostics.Activity.Current?.Id ?? contexto.HttpContext.TraceIdentifier
+    })
+    { StatusCode = StatusCodes.Status400BadRequest, ContentTypes = { "application/problem+json" } };
+});
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<EvaluacionesDbContext>("base-de-datos", tags: ["ready"]);
 
