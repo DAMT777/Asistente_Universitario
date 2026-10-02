@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Entregas.Api/Entregas.Api.csproj" />
+  </Folder>
+</Solution>

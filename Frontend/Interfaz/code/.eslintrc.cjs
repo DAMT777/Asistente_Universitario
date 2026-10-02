@@ -13,11 +13,11 @@ module.exports = {
   overrides: [
     {
       files: ['src/types/**', 'src/schemas/**', 'src/domain/**', 'src/theme/**'],
-      rules: { 'no-restricted-imports': ['error', { patterns: [...SIN_REACT, ...SIN_WEB, ...SIN_UI, '@/api', '@/api/*', '@/hooks', '@/hooks/*'] }] },
+      rules: { 'no-restricted-imports': ['error', { patterns: [...new Set([...SIN_REACT, ...SIN_WEB, ...SIN_UI, '@/api', '@/api/*', '@/hooks', '@/hooks/*'])] }] },
     },
     {
       files: ['src/api/**'],
-      rules: { 'no-restricted-imports': ['error', { patterns: [...SIN_REACT, ...SIN_WEB, ...SIN_UI, '@/hooks', '@/hooks/*'] }] },
+      rules: { 'no-restricted-imports': ['error', { patterns: [...new Set([...SIN_REACT, ...SIN_WEB, ...SIN_UI, '@/hooks', '@/hooks/*'])] }] },
     },
     {
       files: ['src/hooks/**'],

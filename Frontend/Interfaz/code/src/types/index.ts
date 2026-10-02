@@ -1,6 +1,6 @@
 export type Rol = 'estudiante' | 'docente';
 export type Corte = 1 | 2 | 3;
-export type FechaISO = string; // 'YYYY-MM-DD'
+export type FechaISO = string; // ISO 8601 UTC; vacío para una actividad sin fecha límite.
 export type AcentoCurso = 'rojo' | 'violeta' | 'verde';
 
 export interface Usuario {
@@ -34,9 +34,10 @@ export interface Actividad {
   cursoId: string;
   corte: Corte;
   titulo: string;
-  /** Peso dentro de su corte; las actividades de un corte suman 100. */
+  /** Peso dentro de su corte; las actividades de un corte suman hasta 100. */
   peso: number;
   vence: FechaISO;
+  requiereEntrega: boolean;
 }
 
 export type EstadoPublicacion = 'borrador' | 'publicada';
@@ -49,6 +50,17 @@ export interface Calificacion {
   nota: number | null;
   estado: EstadoPublicacion | null;
   retro: string;
+  tamano?: number;
+  urlArchivo?: string;
+  entregaId?: string;
+}
+
+export interface PublicacionCorte {
+  cursoId: string;
+  estudianteId: string;
+  corte: Corte;
+  nota: number;
+  fechaPublicacion: string;
 }
 
 /** Estado de una actividad visto por el docente. */
@@ -60,7 +72,7 @@ export type EstadoCalificacion = EstadoDocente | EstadoEstudiante;
 export interface ResumenCorte {
   corte: Corte;
   peso: number;
-  /** Promedio ponderado de las notas publicadas del corte, o null si no hay. */
+  /** Suma acumulativa de los aportes publicados del corte, o null si no hay. */
   nota: number | null;
   /** Puntos que el corte aporta a la nota final (0–5). */
   aporte: number;

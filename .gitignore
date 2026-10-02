@@ -1,0 +1,14 @@
+# Secretos y configuración local (guía técnica, sección 12.6)
+.env
+infra/keys/
+appsettings.*.local.json
+
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+
+# Frontend
+node_modules/
+dist/
