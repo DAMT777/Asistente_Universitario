@@ -15,7 +15,7 @@ Frontend (React, 5173) -> API Gateway (YARP, 5000) -> Usuarios (5001) · Evaluac
 | `services/evaluaciones/` | Cursos, pesos de los cortes y actividades (CU-02, CU-03), calificaciones de actividad (CU-05 a CU-08), ponderado y publicación de cortes (CU-09 a CU-12) y notas del estudiante (CU-15, CU-16). |
 | `services/entregas/` | Entregas con uno o varios archivos en Blob Storage (CU-13, CU-14) y su consulta por el profesor. |
 | `services/compartido/` | `Unillanos.ServiceDefaults` (errores, JWT, correlación, health, logs) y `Unillanos.Pruebas.Compartidas` (ayudas de prueba y lector de contratos). |
-| `contracts/` | Contratos OpenAPI: la fuente de verdad de la API. Los cambios van en `CAMBIOS_CONTRATO.md`. |
+| `contracts/` | Contratos OpenAPI: la fuente de verdad de la API. |
 | `infra/` | `docker-compose.yml`, `.env.example` y scripts de llaves y tokens de desarrollo. |
 
 Cada servicio tiene `src/` en capas Api / Application / Domain / Infrastructure, `tests/`, `Dockerfile` y su `README.md`.
