@@ -18,6 +18,7 @@ Frontend (React) -> API Gateway (YARP, 5000) -> Usuarios (5001) · Evaluaciones 
 
 - .NET SDK 10 (fijado en `global.json`).
 - Docker, para el entorno local y las pruebas de integración.
+- Node.js 22, para el frontend (`Frontend/Interfaz/code`).
 - `openssl` y `bash`, para los scripts de `infra/scripts`.
 
 ## Levantar el entorno local
@@ -33,6 +34,14 @@ Para obtener un token de prueba de un usuario semilla (`ana`, `luis`, `marta`, `
 ```bash
 TOKEN=$(infra/scripts/generar-token.sh ana)
 curl -s http://localhost:5002/mis-notas -H "Authorization: Bearer $TOKEN"
+```
+
+Para usar la aplicación web contra este backend (rol estudiante), en otra terminal:
+
+```bash
+cd Frontend/Interfaz/code
+npm install
+npm run dev:backend                     # http://localhost:5173 · usuario E0001, contraseña Demo1234!
 ```
 
 Los comandos de cada servicio están en su README: [evaluaciones](services/evaluaciones/README.md) y [entregas](services/entregas/README.md).

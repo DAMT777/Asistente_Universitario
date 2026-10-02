@@ -18,11 +18,41 @@ Usuarios de prueba (cualquier contraseña de 6 o más caracteres):
 - Estudiante: `160005017`
 - Docente: `lrincon`
 
-Para conectar un backend real:
+### Con el backend real
+
+La parte del estudiante (CU-13 a CU-16) ya habla con los servicios de Evaluaciones y Entregas:
 
 ```bash
-VITE_API_URL=https://api.ejemplo.edu.co npm run dev
+# 1. Backend (desde la raíz del repositorio)
+cp infra/.env.example infra/.env          # edite los valores
+infra/scripts/generar-llaves.sh
+docker compose -f infra/docker-compose.yml up --build
+
+# 2. Frontend (desde esta carpeta)
+npm run dev:backend                       # http://localhost:5173
 ```
+
+En modo `backend`, el servidor de Vite hace de gateway local, así que no hay problemas de CORS:
+
+| Ruta en el navegador | Va a |
+| --- | --- |
+| `/api/mis-notas/**` | Evaluaciones (`EVALUACIONES_URL`, por defecto `http://localhost:5002`) |
+| `/api/mis-entregas`, `/api/entregas/**`, `/api/actividades/{id}/entregas` | Entregas (`ENTREGAS_URL`, por defecto `http://localhost:5003`) |
+| `/api/auth/login`, `/api/auth/logout` | Doble de Usuarios de desarrollo (`dev/autenticacionDev.ts`) |
+| Cualquier otra `/api/**` | 501 `NO_IMPLEMENTADO` (funciones del docente aún sin backend) |
+
+El doble de Usuarios solo existe en `npm run dev:backend`: firma JWT RS256 con `infra/keys/jwt-privada.pem` (la llave nunca llega al navegador) para los usuarios semilla, todos con la contraseña `Demo1234!`:
+
+- Estudiantes: `E0001` (Ana: tiene notas publicadas), `E0002` (Luis: solo un borrador), `E0003` (Marta: sin notas), `E0099` (Pedro: no inscrito).
+- Docente: `P0001`. Inicia sesión, pero sus pantallas todavía no tienen backend.
+
+Cuando exista el API Gateway, todo `/api` se envía allí y el login lo atiende Usuarios:
+
+```bash
+GATEWAY_URL=http://localhost:5000 npm run dev:backend
+```
+
+Para un build que apunte a un gateway publicado: `VITE_API_URL=https://gateway.ejemplo.edu.co npm run build`.
 
 ## Estructura
 
@@ -32,6 +62,7 @@ src/
   schemas/    Validación con Zod (formularios y respuestas del backend)
   domain/     Motor de ponderado, estados de calificación, reglas y fechas
   api/        Contrato ApiClient, cliente HTTP (fetch) y api simulada
+dev/          Solo para `vite`: doble de Usuarios (login de desarrollo)
   hooks/      useMisNotas, useCalificaciones, usePonderado, useEntrega, useSesion…
   theme/      tokens.ts: colores, espaciados, tipografía, radios y movimiento
   ui/         Componentes visuales web (Panel, Chip, Barra, Pestanas, Campo…)
@@ -75,10 +106,10 @@ types ← schemas ← domain ← api ← hooks ← ui / features ← app
 
 | Hook | Rol | Devuelve |
 | --- | --- | --- |
-| `useMisNotas()` | Estudiante | Resumen ponderado por curso, actividades con estado, total de créditos |
+| `useMisNotas()` | Estudiante | Matriz del backend (cortes publicados y definitiva parcial), actividades con su nota y su entrega |
 | `useNotasCurso(id)` | Estudiante | Lo mismo para un curso |
 | `useProximasEntregas(n)` | Estudiante | Próximas actividades ordenadas por fecha |
-| `useEntrega(actividadId)` | Estudiante | Estado, `abierta` y `entregar(archivo)` con validación de formato y tamaño |
+| `useEntrega(actividadId)` | Estudiante | Estado, `abierta`, `entregar(archivo)` (sube o reemplaza) y `anular()` |
 | `useCalificaciones(cursoId, actividadId)` | Docente | Filas por estudiante, conteos, `guardar()` (borrador o publicar) y `publicarBorradores()` |
 | `usePonderado(cursoId)` | Docente | Borrador de pesos, validación en vivo (cada grupo suma 100) y acumulado por estudiante |
 | `usePendientesDocente()` | Docente | Actividades con entregas sin calificar o en borrador |
@@ -89,9 +120,9 @@ types ← schemas ← domain ← api ← hooks ← ui / features ← app
 
 - Notas de 0.0 a 5.0 con un decimal; se aceptan `3.5` y `3,5`.
 - Cada curso define los pesos de sus tres cortes, que suman 100. Las actividades de cada corte también suman 100.
-- La nota de un corte es el promedio ponderado de las notas publicadas. El acumulado es la suma del aporte de cada corte.
-- El estudiante no ve los borradores: para él, una actividad en borrador aparece como "Entregada".
-- Las entregas se cierran en la fecha límite o cuando la actividad ya está calificada. Se admiten PDF, DOCX o ZIP de hasta 10 MB.
+- Para el estudiante, la nota de cada corte y la definitiva parcial las calcula el backend sobre los cortes publicados; el frontend no las recalcula. En la api simulada se calculan con `domain/ponderado.ts`.
+- El estudiante no ve los borradores: para él, una actividad en borrador aparece como "Entregada" o "Pendiente".
+- Las entregas se cierran en la fecha límite o cuando la actividad ya está calificada. Mientras siga abierta, la entrega se puede reemplazar o anular. Se admiten PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG de hasta 20 MB; el backend además revisa que el contenido corresponda a la extensión.
 - Si el docente edita una nota publicada, vuelve a borrador hasta que la publique de nuevo.
 - La nota aprobatoria (3.0) se inyecta en `ApiProvider`.
 

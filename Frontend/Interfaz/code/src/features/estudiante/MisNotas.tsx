@@ -3,7 +3,7 @@ import { useApi, useMisNotas } from '@/hooks';
 import { formatoNota } from '@/domain';
 import { acento, colors, font } from '@/theme/tokens';
 import { Barra, Cargando, ErrorEstado, Monograma, Panel, TituloPagina, entrada } from '@/ui';
-import { codigoCurso, useLayout } from '../cursos/compartido';
+import { codigoCurso, textoCreditos, useLayout } from '../cursos/compartido';
 import { GrillaCursos } from './InicioEstudiante';
 
 export function CursosEstudiante() {
@@ -37,7 +37,7 @@ export function MisNotas() {
                 <Monograma texto={n.curso.monograma} acento={n.curso.acento} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 15, fontWeight: 600 }}>{n.curso.nombre}</span>
-                  <span style={{ fontSize: 12, color: colors.textoTenue }}>{codigoCurso(n.curso)} · {n.curso.creditos} créditos</span>
+                  <span style={{ fontSize: 12, color: colors.textoTenue }}>{[codigoCurso(n.curso), textoCreditos(n.curso)].filter(Boolean).join(' · ')}</span>
                 </div>
                 <span style={{ fontSize: 28, fontWeight: 600 }}>{formatoNota(n.resumen.acumulado)}</span>
               </button>
@@ -78,11 +78,11 @@ export function MisNotas() {
                 </div>
               ))}
               <span style={{ fontSize: 22, fontWeight: 600 }}>{formatoNota(n.resumen.acumulado)}</span>
-              <span style={{ fontSize: 15, textAlign: 'right', color: colors.textoMedio }}>{n.curso.creditos}</span>
+              <span style={{ fontSize: 15, textAlign: 'right', color: colors.textoMedio }}>{n.curso.creditos ?? '—'}</span>
             </button>
           ))}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 20px', fontSize: 13, color: colors.textoTenue }}>
-            <span>Total créditos</span><strong style={{ color: colors.texto, fontWeight: font.weight.bold }}>{q.totalCreditos}</strong>
+            <span>Total créditos</span><strong style={{ color: colors.texto, fontWeight: font.weight.bold }}>{q.totalCreditos ?? '—'}</strong>
           </div>
         </div>
       )}

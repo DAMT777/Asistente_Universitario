@@ -3,7 +3,7 @@ import { useMisNotas, useProximasEntregas, useUsuario, useApi } from '@/hooks';
 import { fechaCorta, formatoNota, relativo } from '@/domain';
 import { acento, colors, font } from '@/theme/tokens';
 import { Barra, Boton, Cargando, Chevron, Chip, ErrorEstado, Fila, Icono, icono, Monograma, Panel, Tarjeta, entrada } from '@/ui';
-import { codigoCurso, useLayout } from '../cursos/compartido';
+import { codigoCurso, textoCreditos, useLayout } from '../cursos/compartido';
 import type { NotasCurso } from '@/hooks';
 
 export function InicioEstudiante() {
@@ -71,7 +71,7 @@ export function GrillaCursos({ notas, conDocente }: { notas: NotasCurso[]; conDo
             </div>
             <Chevron />
           </div>
-          {conDocente && <span style={{ fontSize: 13, color: colors.textoTenue }}>{n.curso.docente} · {n.curso.creditos} créditos</span>}
+          {conDocente && <span style={{ fontSize: 13, color: colors.textoTenue }}>{[n.curso.docente, textoCreditos(n.curso)].filter(Boolean).join(' · ')}</span>}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
             <span style={{ fontSize: 34, fontWeight: 600, lineHeight: 1 }}>{formatoNota(n.resumen.acumulado)}</span>
             <span style={{ fontSize: 13, color: colors.textoTenue }}>acumulado · evaluado {Math.round(n.resumen.evaluado)}%</span>

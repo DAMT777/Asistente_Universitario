@@ -50,14 +50,15 @@ export const pesosCursoSchema = z.object({
 });
 export type PesosCursoInput = z.infer<typeof pesosCursoSchema>;
 
-export const EXTENSIONES_ENTREGA = ['pdf', 'docx', 'zip'] as const;
-export const TAMANO_MAX_ENTREGA = 10 * 1024 * 1024;
+/** Mismas reglas que el servicio de Entregas (que además valida la firma del contenido). */
+export const EXTENSIONES_ENTREGA = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'png', 'jpg', 'jpeg'] as const;
+export const TAMANO_MAX_ENTREGA = 20 * 1024 * 1024;
 
 export const archivoEntregaSchema = z.object({
   nombre: z
     .string()
-    .refine((n) => EXTENSIONES_ENTREGA.some((e) => n.toLowerCase().endsWith('.' + e)), 'Formato no admitido. Usa PDF, DOCX o ZIP.'),
-  tamano: z.number().max(TAMANO_MAX_ENTREGA, 'El archivo supera 10 MB.'),
+    .refine((n) => EXTENSIONES_ENTREGA.some((e) => n.toLowerCase().endsWith('.' + e)), 'Formato no admitido. Usa PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG.'),
+  tamano: z.number().positive('El archivo está vacío.').max(TAMANO_MAX_ENTREGA, 'El archivo supera 20 MB.'),
   datos: z.unknown().optional(),
 });
 
@@ -75,6 +76,27 @@ export const calificacionSchema = z.object({
   actividadId: z.string(), estudianteId: z.string(), entregado: z.string().nullable(), archivo: z.string().nullable(),
   nota: z.number().nullable(), estado: z.enum(['borrador', 'publicada']).nullable(), retro: z.string(),
 });
+// Rol estudiante: mismas formas que contracts/evaluaciones.yaml y contracts/entregas.yaml.
+const corteSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+export const matrizNotasSchema = z.object({
+  cursos: z.array(z.object({
+    cursoId: z.string(), codigo: z.string(), nombre: z.string(), profesor: z.string(),
+    cortes: z.array(z.object({ corte: corteSchema, pesoCorte: z.number(), nota: z.number().nullable(), publicado: z.boolean() })),
+    definitivaParcial: z.number(), esParcial: z.boolean(),
+  })),
+});
+export const notasActividadesSchema = z.object({
+  cursoId: z.string(),
+  actividades: z.array(z.object({
+    actividadId: z.string(), titulo: z.string(), corte: corteSchema, peso: z.number(), fechaLimite: z.string(),
+    estado: z.enum(['PUBLICADA', 'SIN_CALIFICAR']), nota: z.number().nullable(), retroalimentacion: z.string().nullable(),
+  })),
+});
+export const entregaSchema = z.object({
+  id: z.string(), actividadId: z.string(), estudianteId: z.string(), fechaEnvio: z.string(),
+  estado: z.enum(['ENVIADA', 'ANULADA']), nombreArchivo: z.string(), tamano: z.number(),
+});
+
 export const usuarioSchema = z.object({ id: z.string(), nombre: z.string(), codigo: z.string(), rol: z.enum(['estudiante', 'docente']) });
 export const sesionSchema = z.object({ token: z.string(), usuario: usuarioSchema });
 

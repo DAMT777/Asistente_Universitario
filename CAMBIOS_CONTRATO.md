@@ -29,12 +29,23 @@ No está definido. Hoy se acepta (si la fecha está vigente), reemplaza el archi
 Falta o es inválida `X-Service-Key` → 401 `NO_AUTENTICADO`.
 **Propuesta:** dejarlo documentado así. Ya está en `evaluaciones.yaml`.
 
-## 5. Diferencias con el frontend actual
+## 5. Datos del curso que el frontend muestra y el backend no expone
 
-`Frontend/Interfaz` consume un mock con otras formas: por ejemplo `Calificacion { nota, estado: 'borrador'|'publicada', retro }`, `Actividad.vence` como fecha sin hora y `POST /actividades/{id}/entregas` devolviendo una calificación.
-**Propuesta:** adaptar `src/api/http.ts` a los contratos de `contracts/`. Aquí no se tocó el frontend.
+El frontend ya consume los contratos del estudiante tal como están (`src/api/http.ts`, sección `estudiante`). Le faltan datos que hoy oculta cuando no llegan:
 
-## 6. Escala de los decimales
+| Campo | Dónde se usa | Propuesta |
+|---|---|---|
+| `creditos` | Mis notas (columna y total de créditos), tarjetas de curso | Agregar a `CursoMatriz` en `GET /mis-notas`. |
+| `periodo` (p. ej. `2026B`) | Inicio ("Semestre …") y código del curso | Agregarlo a `CursoMatriz`. |
+| `grupo` | Código del curso (`603803-1`) | Agregarlo a `CursoMatriz`. |
+
+## 6. Login (servicio de Usuarios)
+
+No hay contrato de Usuarios todavía. El frontend llama `POST /auth/login` con `{ usuario, contrasena, rol: 'estudiante'|'docente' }` y espera `{ token, usuario: { id, nombre, codigo, rol: 'estudiante'|'docente' } }`, más `POST /auth/logout` (204).
+El doble de desarrollo (`Frontend/Interfaz/code/dev/autenticacionDev.ts`) responde exactamente eso y firma el JWT con los claims acordados (`sub`, `rol` en mayúsculas, `nombre`, `iss`, `aud`, `iat`, `exp`).
+**Propuesta:** que `contracts/usuarios.yaml` use esta forma, o avisar para ajustar `src/api/http.ts`.
+
+## 7. Escala de los decimales
 
 `peso` y `pesoCorte` salen tal como están en la base `DECIMAL(5,2)`, por ejemplo `30.00`. Las notas calculadas salen con 1 decimal (`1.0`).
 **Propuesta:** aclarar en el contrato que son números y que el cliente no debe depender de la escala.

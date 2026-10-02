@@ -19,9 +19,10 @@ export interface Curso {
   id: string;
   codigo: string;
   nombre: string;
-  grupo: number;
-  creditos: number;
-  periodo: string;
+  /** grupo, créditos y periodo aún no los expone el backend (ver CAMBIOS_CONTRATO.md). */
+  grupo?: number;
+  creditos?: number;
+  periodo?: string;
   docente: string;
   /** Peso de cada corte en la nota final; suman 100. */
   pesos: [number, number, number];
@@ -86,4 +87,58 @@ export interface ArchivoEntrega {
   tamano: number;
   /** Blob en web, { uri } en React Native. El adaptador de api decide cómo subirlo. */
   datos?: unknown;
+}
+
+// ── Respuestas del backend para el rol estudiante (contracts/evaluaciones.yaml y contracts/entregas.yaml) ──
+
+export interface CorteMatriz {
+  corte: Corte;
+  pesoCorte: number;
+  /** Nota publicada del corte; null mientras no se publique (nunca 0). */
+  nota: number | null;
+  publicado: boolean;
+}
+
+export interface CursoMatriz {
+  cursoId: string;
+  codigo: string;
+  nombre: string;
+  profesor: string;
+  cortes: CorteMatriz[];
+  /** Calculada por el backend solo sobre cortes publicados. */
+  definitivaParcial: number;
+  esParcial: boolean;
+}
+
+export interface MatrizNotas {
+  cursos: CursoMatriz[];
+}
+
+export interface NotaActividad {
+  actividadId: string;
+  titulo: string;
+  corte: Corte;
+  peso: number;
+  /** Instante UTC (ISO 8601). */
+  fechaLimite: string;
+  /** Un borrador también llega como SIN_CALIFICAR: el estudiante nunca lo ve. */
+  estado: 'PUBLICADA' | 'SIN_CALIFICAR';
+  nota: number | null;
+  retroalimentacion: string | null;
+}
+
+export interface NotasActividades {
+  cursoId: string;
+  actividades: NotaActividad[];
+}
+
+export interface Entrega {
+  id: string;
+  actividadId: string;
+  estudianteId: string;
+  /** Instante UTC (ISO 8601). */
+  fechaEnvio: string;
+  estado: 'ENVIADA' | 'ANULADA';
+  nombreArchivo: string;
+  tamano: number;
 }

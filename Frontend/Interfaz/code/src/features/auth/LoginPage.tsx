@@ -1,13 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import type { Rol } from '@/types';
-import { useSesion } from '@/hooks';
+import { useApi, useSesion } from '@/hooks';
 import { colors, font } from '@/theme/tokens';
-
-const USUARIO_DEMO: Record<Rol, string> = { estudiante: '160005017', docente: 'lrincon' };
 
 export function LoginPage() {
   const { sesion, login } = useSesion();
+  const { usuariosDemo } = useApi();
   const [rol, setRol] = useState<Rol | null>(null);
   const [usuario, setUsuario] = useState('');
   const [contrasena, setContrasena] = useState('');
@@ -16,7 +15,7 @@ export function LoginPage() {
 
   if (sesion) return <Navigate to={sesion.usuario.rol === 'docente' ? '/d' : '/e'} replace />;
 
-  const elegir = (r: Rol) => { setRol(r); setUsuario(USUARIO_DEMO[r]); setErrores({}); };
+  const elegir = (r: Rol) => { setRol(r); setUsuario(usuariosDemo[r] ?? ''); setErrores({}); };
 
   async function enviar(e: FormEvent) {
     e.preventDefault();

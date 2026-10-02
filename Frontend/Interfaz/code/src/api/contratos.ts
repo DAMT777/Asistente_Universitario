@@ -1,4 +1,4 @@
-import type { Actividad, ArchivoEntrega, Calificacion, Curso, Rol, Sesion, Usuario } from '@/types';
+import type { Actividad, ArchivoEntrega, Calificacion, Curso, Entrega, MatrizNotas, NotasActividades, Rol, Sesion, Usuario } from '@/types';
 
 /**
  * Contrato único que consumen los hooks. Hay dos implementaciones:
@@ -22,15 +22,32 @@ export interface ApiClient {
   calificaciones: {
     porActividad(actividadId: string): Promise<Calificacion[]>;
     porCurso(cursoId: string): Promise<Calificacion[]>;
-    delEstudiante(estudianteId: string): Promise<Calificacion[]>;
     guardar(input: { actividadId: string; estudianteId: string; nota: number; retro: string; publicar: boolean }): Promise<Calificacion>;
     publicarBorradores(actividadId: string): Promise<number>;
-    entregar(actividadId: string, archivo: ArchivoEntrega): Promise<Calificacion>;
+  };
+  /**
+   * Rol estudiante, con las mismas rutas y formas de contracts/ (CU-13 a CU-16).
+   * El estudiante es el del token: ninguna ruta recibe su id.
+   */
+  estudiante: {
+    /** GET /mis-notas: cortes publicados y definitiva parcial por curso. */
+    matriz(): Promise<MatrizNotas>;
+    /** GET /mis-notas/cursos/{cursoId}/actividades: nota publicada o SIN_CALIFICAR por actividad. */
+    notasCurso(cursoId: string): Promise<NotasActividades>;
+    /** GET /mis-entregas: entregas propias, enviadas y anuladas. */
+    misEntregas(): Promise<Entrega[]>;
+    /** POST /actividades/{id}/entregas. Si ya existía una entrega (aun anulada), se reutiliza. */
+    subirEntrega(actividadId: string, archivo: ArchivoEntrega): Promise<Entrega>;
+    /** PUT /entregas/{id}: reemplaza el archivo mientras no venza la fecha. */
+    editarEntrega(entregaId: string, archivo: ArchivoEntrega): Promise<Entrega>;
+    /** DELETE /entregas/{id}: anula mientras no venza la fecha. */
+    anularEntrega(entregaId: string): Promise<Entrega>;
   };
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  /** codigo: código estable del backend (FECHA_LIMITE_VENCIDA, SIN_PERMISO…), si vino en la respuesta. */
+  constructor(public status: number, message: string, public codigo?: string) {
     super(message);
   }
 }

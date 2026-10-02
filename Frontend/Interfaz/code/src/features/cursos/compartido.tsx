@@ -40,4 +40,7 @@ export function BannerCurso({ curso, cifra, cifraEtiqueta, notasCortes }: { curs
   );
 }
 
-export const codigoCurso = (c: Curso) => `${c.codigo}-${c.grupo} · ${c.periodo}`;
+export const codigoCurso = (c: Curso) => `${c.codigo}${c.grupo != null ? `-${c.grupo}` : ''}${c.periodo ? ` · ${c.periodo}` : ''}`;
+
+/** "3 créditos", o nada si el curso no trae créditos. */
+export const textoCreditos = (c: Curso) => (c.creditos != null ? `${c.creditos} créditos` : '');

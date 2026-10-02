@@ -1,9 +1,10 @@
 import { useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useEntrega } from '@/hooks';
+import { EXTENSIONES_ENTREGA } from '@/schemas';
 import { fechaCorta, formatoNota } from '@/domain';
 import { acento, colors } from '@/theme/tokens';
-import { Cargando, Chip, ErrorEstado, FechaTile, Icono, icono, Panel, entrada } from '@/ui';
+import { Boton, Cargando, Chip, ErrorEstado, FechaTile, Icono, icono, Panel, entrada } from '@/ui';
 import { useToast } from '@/ui/Toast';
 import { Volver } from '../cursos/compartido';
 
@@ -23,7 +24,13 @@ export function ActividadPage() {
     if (!f) return;
     const err = await e.entregar({ nombre: f.name, tamano: f.size, datos: f });
     setError(err);
-    if (!err) toast('Entrega enviada');
+    if (!err) toast(c?.entregado ? 'Archivo reemplazado' : 'Entrega enviada');
+  }
+
+  async function alAnular() {
+    const err = await e.anular();
+    setError(err);
+    if (!err) toast('Entrega anulada');
   }
 
   return (
@@ -59,6 +66,7 @@ export function ActividadPage() {
             <span style={{ fontSize: 15, fontWeight: 600, wordBreak: 'break-all' }}>{c.archivo}</span>
             <span style={{ fontSize: 13, color: colors.textoTenue }}>Enviada el {fechaCorta(c.entregado)}</span>
           </div>
+          {e.puedeAnular && <Boton variante="contorno" onClick={alAnular} disabled={e.enviando} style={{ marginLeft: 'auto', flex: 'none' }}>Anular</Boton>}
         </Panel>
       )}
 
@@ -67,8 +75,8 @@ export function ActividadPage() {
           <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 170, border: '1.5px dashed rgba(255,255,255,0.22)', borderRadius: 18, background: 'rgba(26,24,28,0.5)', cursor: 'pointer', padding: 24, textAlign: 'center', opacity: e.enviando ? 0.6 : 1 }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(200,16,46,0.18)', color: colors.marcaTexto, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icono d={icono.subir} tam={22} /></div>
             <span style={{ fontSize: 16, fontWeight: 600 }}>{e.enviando ? 'Enviando…' : c?.entregado ? 'Reemplazar archivo' : 'Selecciona tu archivo'}</span>
-            <span style={{ fontSize: 13, color: colors.textoTenue }}>PDF, DOCX o ZIP · máximo 10 MB</span>
-            <input type="file" accept=".pdf,.docx,.zip" onChange={alElegir} disabled={e.enviando} style={{ display: 'none' }} />
+            <span style={{ fontSize: 13, color: colors.textoTenue }}>PDF, Word, Excel, PowerPoint, ZIP o imagen · máximo 20 MB</span>
+            <input type="file" accept={ACEPTA} onChange={alElegir} disabled={e.enviando} style={{ display: 'none' }} />
           </label>
           {error && <span role="alert" style={{ fontSize: 13, color: colors.error, fontWeight: 500, marginTop: -12 }}>{error}</span>}
         </>
@@ -82,3 +90,5 @@ export function ActividadPage() {
     </>
   );
 }
+
+const ACEPTA = EXTENSIONES_ENTREGA.map((x) => `.${x}`).join(',');
