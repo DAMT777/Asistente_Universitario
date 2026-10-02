@@ -1,26 +1,34 @@
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-export function hoyISO(d = new Date()): string {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
+export function hoyISO(d = new Date()): string { return d.toISOString(); }
 
 export function diasEntre(desde: string, hasta: string): number {
   return Math.round((Date.parse(hasta) - Date.parse(desde)) / 864e5);
 }
 
 export function fechaCorta(iso: string): string {
-  const [, m, d] = iso.split('-');
-  return `${Number(d)} ${MESES[Number(m) - 1]}`;
+  if (!iso) return 'Sin fecha límite';
+  return new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'short' }).format(new Date(iso));
+}
+
+export function fechaCompleta(iso: string): string {
+  if (!iso) return 'Sin fecha límite';
+  return new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)) + ' · hora de Colombia';
+}
+
+export function fechaFormulario(valor: string): string {
+  return valor ? new Date(valor + ':00-05:00').toISOString() : '';
 }
 
 export function diaMes(iso: string): { dia: string; mes: string } {
-  const [, m, d] = iso.split('-');
-  return { dia: String(Number(d)), mes: MESES[Number(m) - 1].toUpperCase() };
+  if (!iso) return { dia: '—', mes: 'SIN FECHA' };
+  const partes = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'numeric' }).formatToParts(new Date(iso));
+  return { dia: partes.find(p => p.type === 'day')!.value, mes: MESES[Number(partes.find(p => p.type === 'month')!.value) - 1].toUpperCase() };
 }
 
 export function relativo(iso: string, hoy: string): string {
-  const d = diasEntre(hoy, iso);
+  const fechaLocal = (f: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(f));
+  const d = diasEntre(fechaLocal(hoy), fechaLocal(iso));
   if (d === 0) return 'hoy';
   if (d === 1) return 'mañana';
   return d > 0 ? `en ${d} días` : `hace ${-d} días`;
