@@ -12,47 +12,17 @@ npm test           # pruebas del motor de ponderado y validaciones
 npm run lint       # incluye la verificación de límites entre capas
 ```
 
-Sin `VITE_API_URL`, la app usa la api simulada (`src/api/mock`). Esa api trabaja con datos en memoria y fija la fecha de hoy en el 1 de octubre de 2026.
+Sin `VITE_API_URL`, la app usa la api simulada (`src/api/mock`). Esa api trabaja con datos en memoria y fija la hora en el 1 de octubre de 2026, a las 12:00 en Colombia. Los cambios de la demostración se conservan al cambiar de rol y se reinician al recargar.
 Usuarios de prueba (cualquier contraseña de 6 o más caracteres):
 
 - Estudiante: `160005017`
 - Docente: `lrincon`
 
-### Con el backend real
-
-La parte del estudiante (CU-13 a CU-16) ya habla con los servicios de Evaluaciones y Entregas:
+Para conectar un backend real:
 
 ```bash
-# 1. Backend (desde la raíz del repositorio)
-cp infra/.env.example infra/.env          # edite los valores
-infra/scripts/generar-llaves.sh
-docker compose -f infra/docker-compose.yml up --build
-
-# 2. Frontend (desde esta carpeta)
-npm run dev:backend                       # http://localhost:5173
+VITE_API_URL=https://api.ejemplo.edu.co npm run dev
 ```
-
-En modo `backend`, el servidor de Vite hace de gateway local, así que no hay problemas de CORS:
-
-| Ruta en el navegador | Va a |
-| --- | --- |
-| `/api/mis-notas/**` | Evaluaciones (`EVALUACIONES_URL`, por defecto `http://localhost:5002`) |
-| `/api/mis-entregas`, `/api/entregas/**`, `/api/actividades/{id}/entregas` | Entregas (`ENTREGAS_URL`, por defecto `http://localhost:5003`) |
-| `/api/auth/login`, `/api/auth/logout` | Doble de Usuarios de desarrollo (`dev/autenticacionDev.ts`) |
-| Cualquier otra `/api/**` | 501 `NO_IMPLEMENTADO` (funciones del docente aún sin backend) |
-
-El doble de Usuarios solo existe en `npm run dev:backend`: firma JWT RS256 con `infra/keys/jwt-privada.pem` (la llave nunca llega al navegador) para los usuarios semilla, todos con la contraseña `Demo1234!`:
-
-- Estudiantes: `E0001` (Ana: tiene notas publicadas), `E0002` (Luis: solo un borrador), `E0003` (Marta: sin notas), `E0099` (Pedro: no inscrito).
-- Docente: `P0001`. Inicia sesión, pero sus pantallas todavía no tienen backend.
-
-Cuando exista el API Gateway, todo `/api` se envía allí y el login lo atiende Usuarios:
-
-```bash
-GATEWAY_URL=http://localhost:5000 npm run dev:backend
-```
-
-Para un build que apunte a un gateway publicado: `VITE_API_URL=https://gateway.ejemplo.edu.co npm run build`.
 
 ## Estructura
 
@@ -62,7 +32,6 @@ src/
   schemas/    Validación con Zod (formularios y respuestas del backend)
   domain/     Motor de ponderado, estados de calificación, reglas y fechas
   api/        Contrato ApiClient, cliente HTTP (fetch) y api simulada
-dev/          Solo para `vite`: doble de Usuarios (login de desarrollo)
   hooks/      useMisNotas, useCalificaciones, usePonderado, useEntrega, useSesion…
   theme/      tokens.ts: colores, espaciados, tipografía, radios y movimiento
   ui/         Componentes visuales web (Panel, Chip, Barra, Pestanas, Campo…)
@@ -106,12 +75,12 @@ types ← schemas ← domain ← api ← hooks ← ui / features ← app
 
 | Hook | Rol | Devuelve |
 | --- | --- | --- |
-| `useMisNotas()` | Estudiante | Matriz del backend (cortes publicados y definitiva parcial), actividades con su nota y su entrega |
+| `useMisNotas()` | Estudiante | Resumen ponderado por curso, actividades con estado, total de créditos |
 | `useNotasCurso(id)` | Estudiante | Lo mismo para un curso |
 | `useProximasEntregas(n)` | Estudiante | Próximas actividades ordenadas por fecha |
-| `useEntrega(actividadId)` | Estudiante | Estado, `abierta`, `entregar(archivos)` (sube o reemplaza), `anular()` y `descargar(archivoId)` |
+| `useEntrega(actividadId)` | Estudiante | Estado, `abierta`, `entregar(archivos)` con validación de formato, tamaño por archivo, total y cantidad, y `anular()` |
 | `useCalificaciones(cursoId, actividadId)` | Docente | Filas por estudiante, conteos, `guardar()` (borrador o publicar) y `publicarBorradores()` |
-| `usePonderado(cursoId)` | Docente | Borrador de pesos, validación en vivo (cada grupo suma 100) y acumulado por estudiante |
+| `usePonderado(cursoId)` | Docente | Borrador de pesos, validación en vivo de pesos y errores con reintento y acumulado por estudiante |
 | `usePendientesDocente()` | Docente | Actividades con entregas sin calificar o en borrador |
 | `useCrearActividad(cursoId)` | Docente | `crear()` con validación Zod |
 | `useSesion()` | Ambos | `login()`, `logout()` y sesión actual |
@@ -119,15 +88,35 @@ types ← schemas ← domain ← api ← hooks ← ui / features ← app
 ## Reglas de negocio
 
 - Notas de 0.0 a 5.0 con un decimal; se aceptan `3.5` y `3,5`.
-- Cada curso define los pesos de sus tres cortes, que suman 100. Las actividades de cada corte también suman 100.
-- Para el estudiante, la nota de cada corte y la definitiva parcial las calcula el backend sobre los cortes publicados; el frontend no las recalcula. En la api simulada se calculan con `domain/ponderado.ts`.
-- El estudiante no ve los borradores: para él, una actividad en borrador aparece como "Entregada" o "Pendiente".
-- Las entregas se cierran en la fecha límite o cuando la actividad ya está calificada. Mientras siga abierta, la entrega se puede reemplazar o anular.
-- Una entrega tiene uno o varios archivos: se eligen, se revisan en la lista (se pueden quitar o agregar más) y solo se envían al pulsar **Entregar**. Se admiten PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG; hasta 10 archivos, 20 MB por archivo y 50 MB en total. El backend además revisa que el contenido corresponda a la extensión.
-- Al hacer clic en un archivo entregado se descarga con su nombre original, sea del tipo que sea.
+- Cada curso define los pesos de sus tres cortes, que suman 100. Las actividades de cada corte pueden sumar menos de 100, pero nunca superarlo.
+- La nota de avance de un corte es la suma de los aportes publicados, sin normalizar. Publicar una actividad no publica el corte. El profesor publica o corrige el corte por estudiante; la matriz suma únicamente esas publicaciones y marca la definitiva como parcial mientras falten cortes.
+- El estudiante no ve notas ni comentarios en borrador. Las entregas se muestran independientemente de la publicación de una nota.
+- Las entregas, sus reemplazos y sus anulaciones se permiten hasta la hora límite inclusive, aunque exista calificación. Anular conserva la nota. Una entrega tiene uno o varios archivos: se eligen, se revisan en una lista (se pueden quitar o agregar más) y se envían con **Entregar**; reemplazar cambia el conjunto completo. Se admiten PDF, Word, Excel, PowerPoint, ZIP, PNG y JPG; hasta 10 archivos, 20 MB por archivo y 50 MB en total (los mismos límites del servicio de entregas, que además revisa el contenido de cada archivo).
 - Si el docente edita una nota publicada, vuelve a borrador hasta que la publique de nuevo.
 - La nota aprobatoria (3.0) se inyecta en `ApiProvider`.
 
 ## Diseño
 
-Mobile first: tarjetas y listas en pantallas pequeñas y tabla en Mis notas a partir de 860 px. Las pantallas tienen fondo oscuro con la foto del campus desenfocada y paneles translúcidos. El rojo institucional marca la navegación activa y las acciones principales; cada curso tiene un color propio (rojo, violeta o verde) que se usa en su monograma y en sus barras. La tipografía es Public Sans. Todos los valores salen de `theme/tokens.ts`.
+Mobile first: tarjetas y listas en pantallas pequeñas y tabla en Mis notas a partir de 860 px. La interfaz sigue el Manual de Identidad Visual de Unillanos (MN-GCOM-001): rojo institucional `#E3061D` (Pantone 485C · RGB 227,6,29), blanco y grises tenues, con degradados claros y sin fondos oscuros. El logo oficial (`public/logo-unillanos.png`) aparece en el acceso y en la cabecera. El acceso por rol se abre en un modal blanco sobre un overlay blanco translúcido con desenfoque (`Modal` en `ui/`). El rojo institucional marca la navegación activa y las acciones principales; cada curso tiene un color propio (rojo, violeta o verde) que se usa en su monograma y en sus barras. La tipografía es Public Sans. Todos los valores salen de `theme/tokens.ts`.
+
+Microinteracciones (solo web, en `ui/global.css` con una sola curva `motion.easing`): onda (ripple) en botones principales (`ui/onda.ts`, clase `au-onda-host`), llenado progresivo de las barras (`Barra`, `BarraCortes`), elevación con acento rojo en tarjetas y filas de cursos, y un menú flotante de accesibilidad (`ui/Accesibilidad.tsx`: tamaño de texto, alto contraste, subrayado de enlaces, espaciado de lectura y reducción de animaciones, guardado en `localStorage`). Todo respeta `prefers-reduced-motion`. En React Native, la onda pasa a `android_ripple`/`Pressable` y las animaciones a `Animated` o Reanimated.
+
+## Flujos actualizados
+
+- Docente: Actividades permite crear y editar, incluyendo actividades sin entrega y sin fecha obligatoria.
+- Calificar ofrece tabla en escritorio y tarjetas en móvil, búsqueda por nombre/código, filtros y guardado con estado visible. Guardar deja borradores; Publicar notas de actividad publica los borradores de la actividad completa.
+- Notas por corte muestra avance acumulativo, publicación vigente y notas en borrador por estudiante. La omisión de borradores exige una elección expresa. Corregir recalcula solo el estudiante seleccionado.
+- Estudiante: la matriz usa tablas semánticas en escritorio y tarjetas en móvil. Sin publicar no se sustituye por cero. Las entregas muestran fecha/hora de Colombia, tamaño, descarga y anulación con confirmación.
+- La fotografía del campus y los colores institucionales se conservan. El login agrupa campos y botón; la demostración identifica el uso de datos semilla.
+
+## Integración con los servicios
+
+El repositorio contiene el frontend, no los microservicios ni sus archivos OpenAPI. La implementación funcional y los recorridos verificados utilizan la API simulada. El adaptador HTTP traduce los DTO externos de los ejemplos de la guía a los modelos de pantalla: roles PROFESOR/ESTUDIANTE, accessToken, fechaLimite, valor y retroalimentacion. Consulta calificaciones y entregas por separado y utiliza las rutas documentadas para publicar, corregir, reemplazar, anular y descargar. Las descargas requieren el token y se solicitan bajo demanda.
+
+Antes de activar VITE_API_URL, validar los DTO de listado con el equipo. La guía no especifica el JSON de GET /cursos/{id}/ponderado; el adaptador propone que incluya `publicaciones: [{ estudianteId, corte, nota, fechaPublicacion? }]` para comparar avance y publicación vigente. Esta forma es una propuesta de integración, no un contrato aprobado. Las notas y entregas del estudiante siguen `contracts/evaluaciones.yaml` y `contracts/entregas.yaml`: `/mis-notas/cursos/{id}/actividades` devuelve `{ cursoId, actividades: [...] }` (un borrador llega como SIN_CALIFICAR) y cada entrega trae `archivos: [{ id, nombreArchivo, tamano }]`, que se descargan uno por uno en `/entregas/{id}/archivos/{archivoId}`. Las listas de cursos y estudiantes admiten los DTO normalizados usados aquí y los campos de la guía.
+
+Actualizar pesos reales usa llamadas separadas al curso y a las actividades. Se aplican primero las disminuciones de peso para no superar 100 durante el cambio. Si una llamada falla, se recargan los datos; la operación no es transaccional entre endpoints. El backend debe calcular y validar de nuevo todas las reglas, controlar permisos y concurrencia. Las pruebas del adaptador usan respuestas simuladas y no sustituyen una prueba con el gateway real.
+
+## Verificación
+
+`npm run build`, `npm run lint` y `npm test`. Las pruebas cubren corte incompleto sin normalización, cero frente a ausencia, publicación independiente, borradores, corrección individual, privacidad de notas, entregas tras calificar, anulación, límites de archivo, vencimiento inclusive y adaptación de mensajes HTTP.

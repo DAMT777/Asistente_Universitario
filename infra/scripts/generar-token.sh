@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Emite un JWT RS256 de PRUEBA para un usuario semilla, firmado con infra/keys/jwt-privada.pem.
+# Emite un JWT RS256 de PRUEBA para un usuario semilla, firmado con infra/keys/jwt-private.pem.
 # Sustituye al servicio de Usuarios mientras no esté disponible. Solo para desarrollo.
 #
 #   TOKEN=$(infra/scripts/generar-token.sh ana)
@@ -24,7 +24,7 @@ esac
 shift
 
 MINUTOS=60
-LLAVE="$DIR/../keys/jwt-privada.pem"
+LLAVE="$DIR/../keys/jwt-private.pem"
 DESFASE=0
 while [[ $# -gt 0 ]]; do
   case "$1" in

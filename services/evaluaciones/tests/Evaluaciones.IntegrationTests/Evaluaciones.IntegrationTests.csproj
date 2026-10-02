@@ -1,10 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Evaluaciones.Api\Evaluaciones.Api.csproj" />
-    <ProjectReference Include="..\..\..\compartido\Unillanos.Pruebas.Compartidas\Unillanos.Pruebas.Compartidas.csproj" />
-  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Testcontainers.MsSql" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Evaluaciones.Api\Evaluaciones.Api.csproj" />
+    <!-- Lector de contracts/*.yaml para validar las respuestas contra el contrato. -->
+    <ProjectReference Include="..\..\..\compartido\Unillanos.Pruebas.Compartidas\Unillanos.Pruebas.Compartidas.csproj" />
+  </ItemGroup>
+
 </Project>

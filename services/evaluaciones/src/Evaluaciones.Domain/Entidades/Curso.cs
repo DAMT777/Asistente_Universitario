@@ -1,29 +1,21 @@
 namespace Evaluaciones.Domain.Entidades;
 
-public sealed class Curso
+public class Curso
 {
-    public required Guid Id { get; init; }
-    public required string Codigo { get; init; }
-    public required string Nombre { get; init; }
-    public required Guid ProfesorId { get; init; }
-    public required string ProfesorNombre { get; init; }
-    public required decimal PesoCorte1 { get; init; }
-    public required decimal PesoCorte2 { get; init; }
-    public required decimal PesoCorte3 { get; init; }
+    public Guid Id { get; set; }
+    public string Codigo { get; set; } = "";
+    public string Nombre { get; set; } = "";
+    public Guid ProfesorId { get; set; }
+    public string ProfesorNombre { get; set; } = "";
+    public decimal PesoCorte1 { get; set; }
+    public decimal PesoCorte2 { get; set; }
+    public decimal PesoCorte3 { get; set; }
 
-    public const int NumeroCortes = 3;
-
-    public decimal PesoDe(int corte) => corte switch
+    public decimal PesoDeCorte(int corte) => corte switch
     {
         1 => PesoCorte1,
         2 => PesoCorte2,
         3 => PesoCorte3,
-        _ => throw new ArgumentOutOfRangeException(nameof(corte), corte, "El corte debe estar entre 1 y 3."),
+        _ => throw new ArgumentOutOfRangeException(nameof(corte), "El corte debe ser 1, 2 o 3.")
     };
-}
-
-public sealed class CursoEstudiante
-{
-    public required Guid CursoId { get; init; }
-    public required Guid EstudianteId { get; init; }
 }

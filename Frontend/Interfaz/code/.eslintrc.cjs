@@ -3,8 +3,6 @@
 const SIN_REACT = ['react', 'react/*', 'react-dom', 'react-dom/*', '@tanstack/*'];
 const SIN_WEB = ['react-dom', 'react-dom/*', 'react-router', 'react-router-dom'];
 const SIN_UI = ['@/ui', '@/ui/*', '@/features', '@/features/*', '@/app', '@/app/*'];
-/** ESLint rechaza la regla si un patrón se repite. */
-const unicos = (...listas) => [...new Set(listas.flat())];
 
 module.exports = {
   root: true,
@@ -15,15 +13,15 @@ module.exports = {
   overrides: [
     {
       files: ['src/types/**', 'src/schemas/**', 'src/domain/**', 'src/theme/**'],
-      rules: { 'no-restricted-imports': ['error', { patterns: unicos(SIN_REACT, SIN_WEB, SIN_UI, ['@/api', '@/api/*', '@/hooks', '@/hooks/*']) }] },
+      rules: { 'no-restricted-imports': ['error', { patterns: [...new Set([...SIN_REACT, ...SIN_WEB, ...SIN_UI, '@/api', '@/api/*', '@/hooks', '@/hooks/*'])] }] },
     },
     {
       files: ['src/api/**'],
-      rules: { 'no-restricted-imports': ['error', { patterns: unicos(SIN_REACT, SIN_WEB, SIN_UI, ['@/hooks', '@/hooks/*']) }] },
+      rules: { 'no-restricted-imports': ['error', { patterns: [...new Set([...SIN_REACT, ...SIN_WEB, ...SIN_UI, '@/hooks', '@/hooks/*'])] }] },
     },
     {
       files: ['src/hooks/**'],
-      rules: { 'no-restricted-imports': ['error', { patterns: unicos(SIN_WEB, SIN_UI) }] },
+      rules: { 'no-restricted-imports': ['error', { patterns: [...SIN_WEB, ...SIN_UI] }] },
     },
   ],
 };

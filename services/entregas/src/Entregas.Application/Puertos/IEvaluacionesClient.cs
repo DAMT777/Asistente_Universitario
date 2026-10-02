@@ -7,14 +7,16 @@ namespace Entregas.Application.Puertos;
 /// </summary>
 public interface IEvaluacionesClient
 {
-    Task<ActividadInfo?> ObtenerActividadAsync(Guid actividadId, Guid estudianteId, CancellationToken ct);
+    /// <param name="estudianteId">Null cuando consulta un profesor: EstudianteInscrito llega en false.</param>
+    Task<ActividadInfo?> ObtenerActividadAsync(Guid actividadId, Guid? estudianteId, CancellationToken ct);
 }
 
 public sealed record ActividadInfo(
     Guid ActividadId,
     Guid CursoId,
     Guid ProfesorId,
-    DateTimeOffset FechaLimite,
+    /// <summary>Null si la actividad no tiene fecha límite.</summary>
+    DateTimeOffset? FechaLimite,
     bool RequiereEntrega,
     bool EstudianteInscrito);
 

@@ -1,4 +1,4 @@
-import type { Actividad, ArchivoDescargado, ArchivoEntrega, Calificacion, Curso, Entrega, MatrizNotas, NotasActividades, Rol, Sesion, Usuario } from '@/types';
+import type { Actividad, ArchivoEntrega, Calificacion, Corte, Curso, PublicacionCorte, Rol, Sesion, Usuario } from '@/types';
 
 /**
  * Contrato único que consumen los hooks. Hay dos implementaciones:
@@ -6,6 +6,10 @@ import type { Actividad, ArchivoDescargado, ArchivoEntrega, Calificacion, Curso,
  * - createMockApi: memoria con datos de ejemplo para desarrollo y demos.
  */
 export interface ApiClient {
+  cortes: {
+    listar(cursoId?: string): Promise<PublicacionCorte[]>;
+    publicar(input: { cursoId: string; estudianteId: string; corte: Corte; omitirBorradores: boolean; corregir: boolean }): Promise<PublicacionCorte>;
+  };
   auth: {
     login(input: { usuario: string; contrasena: string; rol: Rol }): Promise<Sesion>;
     logout(): Promise<void>;
@@ -18,38 +22,24 @@ export interface ApiClient {
   actividades: {
     listar(cursoId?: string): Promise<Actividad[]>;
     crear(input: Omit<Actividad, 'id'>): Promise<Actividad>;
+    editar(id: string, input: Omit<Actividad, 'id'>): Promise<Actividad>;
   };
   calificaciones: {
     porActividad(actividadId: string): Promise<Calificacion[]>;
     porCurso(cursoId: string): Promise<Calificacion[]>;
+    delEstudiante(estudianteId: string): Promise<Calificacion[]>;
     guardar(input: { actividadId: string; estudianteId: string; nota: number; retro: string; publicar: boolean }): Promise<Calificacion>;
     publicarBorradores(actividadId: string): Promise<number>;
-  };
-  /**
-   * Rol estudiante, con las mismas rutas y formas de contracts/ (CU-13 a CU-16).
-   * El estudiante es el del token: ninguna ruta recibe su id.
-   */
-  estudiante: {
-    /** GET /mis-notas: cortes publicados y definitiva parcial por curso. */
-    matriz(): Promise<MatrizNotas>;
-    /** GET /mis-notas/cursos/{cursoId}/actividades: nota publicada o SIN_CALIFICAR por actividad. */
-    notasCurso(cursoId: string): Promise<NotasActividades>;
-    /** GET /mis-entregas: entregas propias, enviadas y anuladas. */
-    misEntregas(): Promise<Entrega[]>;
-    /** POST /actividades/{id}/entregas con uno o varios archivos. Si ya existía una entrega (aun anulada), se reutiliza. */
-    subirEntrega(actividadId: string, archivos: ArchivoEntrega[]): Promise<Entrega>;
-    /** PUT /entregas/{id}: reemplaza todos los archivos mientras no venza la fecha. */
-    editarEntrega(entregaId: string, archivos: ArchivoEntrega[]): Promise<Entrega>;
-    /** DELETE /entregas/{id}: anula mientras no venza la fecha. */
-    anularEntrega(entregaId: string): Promise<Entrega>;
-    /** GET /entregas/{id}/archivos/{archivoId}: contenido con su nombre original. */
-    descargarArchivo(entregaId: string, archivoId: string): Promise<ArchivoDescargado>;
+    /** Uno o varios archivos. Si ya hay una entrega vigente, el conjunto la reemplaza. */
+    entregar(actividadId: string, archivos: ArchivoEntrega[]): Promise<Calificacion>;
+    anularEntrega(actividadId: string): Promise<void>;
+    /** URL local (object URL) de un archivo de la entrega, para descargarlo con su nombre. */
+    descargarArchivo(entregaId: string, archivoId: string): Promise<string>;
   };
 }
 
 export class ApiError extends Error {
-  /** codigo: código estable del backend (FECHA_LIMITE_VENCIDA, SIN_PERMISO…), si vino en la respuesta. */
-  constructor(public status: number, message: string, public codigo?: string) {
+  constructor(public status: number, message: string) {
     super(message);
   }
 }

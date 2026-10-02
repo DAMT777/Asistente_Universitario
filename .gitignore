@@ -16,14 +16,15 @@ coverage*/
 .DS_Store
 Thumbs.db
 
-# Secretos y llaves (nunca al repositorio)
+# Secretos y configuración local (guía técnica, sección 12.6): nunca al repositorio
 infra/keys/
 .env
 .env.*
 !.env.example
+appsettings.*.local.json
 *.pfx
 *.pem
 
-# Frontend (web/)
+# Frontend
 node_modules/
 dist/

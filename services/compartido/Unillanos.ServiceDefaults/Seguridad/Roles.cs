@@ -11,6 +11,8 @@ public static class Roles
 public static class Politicas
 {
     public const string SoloEstudiante = "SoloEstudiante";
+    public const string SoloProfesor = "SoloProfesor";
+    public const string EstudianteOProfesor = "EstudianteOProfesor";
 }
 
 public static class ClaimsJwt
@@ -23,6 +25,8 @@ public static class ClaimsJwt
 public static class ClaimsPrincipalExtensions
 {
     /// <summary>Id del usuario autenticado (claim sub). Lanza si el token no trae un GUID válido.</summary>
+    public static bool EsProfesor(this ClaimsPrincipal usuario) => usuario.IsInRole(Roles.Profesor);
+
     public static Guid ObtenerUsuarioId(this ClaimsPrincipal usuario)
         => Guid.TryParse(usuario.FindFirstValue(ClaimsJwt.Sujeto), out var id) && id != Guid.Empty
             ? id

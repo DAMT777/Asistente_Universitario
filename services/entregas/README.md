@@ -9,7 +9,8 @@ Contrato: [`contracts/entregas.yaml`](../../contracts/entregas.yaml). Base de da
 | PUT | `/entregas/{entregaId}` | Reemplaza todos los archivos mientras no venza la fecha. 200. |
 | DELETE | `/entregas/{entregaId}` | Anula la entrega mientras no venza la fecha. 200 con estado `ANULADA`. |
 | GET | `/mis-entregas?actividadId=` | Lista las entregas propias (filtro opcional), con sus archivos. |
-| GET | `/entregas/{entregaId}/archivos/{archivoId}` | Descarga un archivo propio con su nombre original (`Content-Disposition: attachment`), sea del tipo que sea. |
+| GET | `/entregas/{entregaId}/archivos/{archivoId}` | Descarga un archivo con su nombre original (`Content-Disposition: attachment`), sea del tipo que sea. Lo puede hacer el estudiante dueño o el profesor dueño del curso. |
+| GET | `/actividades/{actividadId}/entregas` | **Profesor dueño del curso:** entregas de todos los estudiantes en la actividad (pantalla de calificar). |
 | GET | `/health/live`, `/health/ready` | Salud (ready revisa SQL Server y Blob Storage). |
 
 Los archivos de cada entrega están en la tabla `ArchivoEntrega` (nombre original, tamaño, tipo, orden y ruta del blob). Si un archivo de la entrega es inválido no se guarda ninguno.
@@ -28,7 +29,7 @@ Para cada subida, edición o anulación consulta a Evaluaciones (`GET /internal/
 | Variable | Ejemplo / valor por defecto |
 |---|---|
 | `ConnectionStrings__Default` | `Server=localhost,1433;Database=entregas_db;User Id=sa;Password=...;TrustServerCertificate=True` |
-| `Jwt__PublicKeyPath` | `/keys/jwt-publica.pem` |
+| `Jwt__PublicKeyPath` | `/keys/jwt-public.pem` |
 | `Jwt__Issuer` / `Jwt__Audience` | `unillanos-usuarios` / `unillanos-notas` |
 | `ServiceKey` | Llave compartida con Evaluaciones (mín. 16 caracteres) |
 | `Services__EvaluacionesBaseUrl` | `http://localhost:5002` |
@@ -52,11 +53,11 @@ infra/scripts/generar-llaves.sh
 docker compose -f infra/docker-compose.yml up --build
 ```
 
-Sin Docker para el servicio (SQL Server, Azurite y Evaluaciones ya arriba):
+Sin Docker para el servicio (SQL Server, Azurite y Evaluaciones ya arriba; una actividad sin fecha límite no vence):
 
 ```bash
 export ConnectionStrings__Default="Server=localhost,1433;Database=entregas_db;User Id=sa;Password=<clave>;TrustServerCertificate=True"
-export Jwt__PublicKeyPath="$PWD/infra/keys/jwt-publica.pem"
+export Jwt__PublicKeyPath="$PWD/infra/keys/jwt-public.pem"
 export ServiceKey="<la misma de Evaluaciones>"
 export Services__EvaluacionesBaseUrl="http://localhost:5002"
 export Storage__ConnectionString="UseDevelopmentStorage=true"

@@ -19,6 +19,9 @@ internal sealed class EntregaRepositorio(EntregasDbContext db) : IEntregaReposit
         return await consulta.OrderByDescending(e => e.FechaEnvio).ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Entrega>> ListarDeActividadAsync(Guid actividadId, CancellationToken ct)
+        => await db.Entregas.AsNoTracking().Where(e => e.ActividadId == actividadId).OrderBy(e => e.FechaEnvio).ToListAsync(ct);
+
     public void Agregar(Entrega entrega) => db.Entregas.Add(entrega);
 
     public Task GuardarCambiosAsync(CancellationToken ct) => db.SaveChangesAsync(ct);

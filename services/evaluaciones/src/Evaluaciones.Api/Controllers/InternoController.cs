@@ -1,26 +1,20 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Evaluaciones.Api.Seguridad;
 using Evaluaciones.Application.CasosDeUso;
-using Evaluaciones.Domain;
-using Unillanos.ServiceDefaults.Errores;
+using Evaluaciones.Application.Dtos;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Evaluaciones.Api.Controllers;
 
-/// <summary>
-/// Endpoints servicio a servicio. No usan JWT sino X-Service-Key y el gateway debe bloquear /internal/**.
-/// </summary>
+/// <summary>Servicio a servicio (Entregas). Sin JWT: exige X-Service-Key. El gateway bloquea /internal/**.</summary>
 [ApiController]
-[Route("internal")]
 [AllowAnonymous]
-[ServiceFilter<RequiereClaveServicioFilter>]
-public sealed class InternoController : ControllerBase
+[ServiceFilter<ClaveServicioFilter>]
+[Route("internal")]
+public sealed class InternoController(ObtenerActividadInterna obtener) : ControllerBase
 {
-    [HttpGet("actividades/{actividadId}")]
-    [ProducesResponseType<ActividadInternaRespuesta>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ErrorApi>(StatusCodes.Status404NotFound, EscritorErrores.ContentType)]
-    public async Task<ActividadInternaRespuesta> Actividad(
-        Guid actividadId, [FromQuery, BindRequired] Guid estudianteId, [FromServices] ObtenerActividadInterna casoDeUso, CancellationToken ct)
-        => await casoDeUso.EjecutarAsync(actividadId, estudianteId, ct) ?? throw new NoEncontradoException("La actividad");
+    /// <param name="estudianteId">Opcional. Con él se informa si está inscrito; Entregas lo omite cuando consulta un profesor.</param>
+    [HttpGet("actividades/{actividadId:guid}")]
+    public async Task<ActionResult<ActividadInternaDto>> Actividad(Guid actividadId, [FromQuery] Guid? estudianteId, CancellationToken ct) =>
+        Ok(await obtener.EjecutarAsync(actividadId, estudianteId, ct));
 }

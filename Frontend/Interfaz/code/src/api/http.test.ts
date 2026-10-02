@@ -1,82 +1,66 @@
-import { describe, expect, it } from 'vitest';
-import { createHttpApi, nombreDeDisposicion } from './http';
-import { ApiError } from './contratos';
+import { describe, expect, it, vi } from 'vitest';
+import { createHttpApi } from './http';
 
-interface Llamada { url: string; init: RequestInit }
-
-function fetchFalso(respuestas: Array<{ status: number; cuerpo?: unknown; binario?: Blob; encabezados?: Record<string, string> }>) {
-  const llamadas: Llamada[] = [];
-  const impl = (async (url: string, init: RequestInit) => {
-    llamadas.push({ url, init });
-    const r = respuestas.shift()!;
-    const cuerpo = r.binario ?? (r.cuerpo === undefined ? null : JSON.stringify(r.cuerpo));
-    return new Response(cuerpo, { status: r.status, headers: r.encabezados });
-  }) as unknown as typeof fetch;
-  return { impl, llamadas };
-}
-
-const entrega = {
-  id: 'x1', actividadId: 'd1', estudianteId: 'e1', fechaEnvio: '2026-10-01T15:00:00Z', estado: 'ENVIADA',
-  archivos: [{ id: 'a1', nombreArchivo: 't.pdf', tamano: 8 }, { id: 'a2', nombreArchivo: 'b.png', tamano: 2 }], tamanoTotal: 10,
-};
-
-describe('createHttpApi · estudiante', () => {
-  it('pide la matriz con el token y valida la respuesta', async () => {
-    const f = fetchFalso([{ status: 200, cuerpo: { cursos: [] } }]);
-    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'tok', fetchImpl: f.impl });
-
-    await expect(api.estudiante.matriz()).resolves.toEqual({ cursos: [] });
-    expect(f.llamadas[0].url).toBe('/api/mis-notas');
-    expect((f.llamadas[0].init.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+// Entrega con la forma de contracts/entregas.yaml (uno o varios archivos).
+const entrega = (extra: Record<string, unknown> = {}) => ({ id: 'ent1', actividadId: 'a1', estudianteId: 'e1', fechaEnvio: '2026-10-01T10:00:00Z', estado: 'ENVIADA', archivos: [{ id: 'f1', nombreArchivo: 'x.pdf', tamano: 20 }, { id: 'f2', nombreArchivo: 'y.png', tamano: 5 }], tamanoTotal: 25, ...extra });
+function respuesta(valor: unknown, status = 200) { return new Response(JSON.stringify(valor), { status, headers: { 'Content-Type': 'application/json' } }); }
+describe('adaptador de los contratos de la guía técnica', () => {
+  it('adapta login y usa el rol devuelto por el servicio', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(respuesta({ accessToken: 'token', usuario: { id: 'p1', nombre: 'Profesora', rol: 'PROFESOR' } }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => null, fetchImpl });
+    const sesion = await api.auth.login({ usuario: 'P0001', contrasena: 'Demo1234!', rol: 'estudiante' });
+    expect(sesion.usuario.rol).toBe('docente');
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ usuario: 'P0001', password: 'Demo1234!' });
   });
-
-  it('sube varios archivos repitiendo el campo "archivo" y edita y anula por id', async () => {
-    const f = fetchFalso([{ status: 201, cuerpo: entrega }, { status: 200, cuerpo: entrega }, { status: 200, cuerpo: { ...entrega, estado: 'ANULADA' } }]);
-    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'tok', fetchImpl: f.impl });
-    const archivos = [{ nombre: 't.pdf', tamano: 8, datos: new Blob(['%PDF-1.7']) }, { nombre: 'b.png', tamano: 2, datos: new Blob(['xx']) }];
-
-    const subida = await api.estudiante.subirEntrega('d1', archivos);
-    await api.estudiante.editarEntrega('x1', archivos.slice(0, 1));
-    const anulada = await api.estudiante.anularEntrega('x1');
-
-    expect(f.llamadas.map((l) => `${l.init.method} ${l.url}`)).toEqual(['POST /api/actividades/d1/entregas', 'PUT /api/entregas/x1', 'DELETE /api/entregas/x1']);
-    const campos = (f.llamadas[0].init.body as FormData).getAll('archivo') as File[];
-    expect(campos.map((x) => x.name)).toEqual(['t.pdf', 'b.png']);
-    expect((f.llamadas[1].init.body as FormData).getAll('archivo')).toHaveLength(1);
-    expect(subida.archivos.map((a) => a.nombreArchivo)).toEqual(['t.pdf', 'b.png']);
-    expect(anulada.estado).toBe('ANULADA');
+  it('convierte la matriz del estudiante sin confundir cero con sin publicar', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(respuesta({ id: 'e1', nombre: 'Ana', rol: 'ESTUDIANTE' })).mockResolvedValueOnce(respuesta({ cursos: [{ cursoId: 'c1', cortes: [{ corte: 1, nota: 0, publicado: true }, { corte: 2, nota: null, publicado: false }] }] }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    expect(await api.cortes.listar()).toEqual([{ cursoId: 'c1', estudianteId: 'e1', corte: 1, nota: 0, fechaPublicacion: '' }]);
+    expect(fetchImpl.mock.calls[1][0]).toBe('/api/mis-notas');
   });
-
-  it('descarga el archivo como Blob con el nombre de Content-Disposition', async () => {
-    const f = fetchFalso([{ status: 200, binario: new Blob(['%PDF-1.7 hola']), encabezados: { 'Content-Disposition': "attachment; filename=Taller_1.pdf; filename*=UTF-8''Taller%201%20%C3%B1.pdf" } }]);
-    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'tok', fetchImpl: f.impl });
-
-    const r = await api.estudiante.descargarArchivo('x1', 'a1');
-
-    expect(f.llamadas[0].url).toBe('/api/entregas/x1/archivos/a1');
-    expect(r.nombre).toBe('Taller 1 ñ.pdf');
-    expect(await r.datos.text()).toBe('%PDF-1.7 hola');
+  it('publica únicamente al estudiante solicitado y muestra los rechazos individuales', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(respuesta({ publicados: [{ estudianteId: 'e1', nota: 3.2 }], rechazados: [] })).mockResolvedValueOnce(respuesta({ publicados: [], rechazados: [{ estudianteId: 'e1', mensaje: 'Tiene 1 calificación en borrador.' }] }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    const input = { cursoId: 'c1', estudianteId: 'e1', corte: 1 as const, corregir: false, omitirBorradores: false };
+    expect((await api.cortes.publicar(input)).nota).toBe(3.2);
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ estudiantes: ['e1'], omitirBorradores: false });
+    await expect(api.cortes.publicar(input)).rejects.toThrow('borrador');
   });
-
-  it('lee el nombre de Content-Disposition en sus dos formas', () => {
-    expect(nombreDeDisposicion('attachment; filename="informe final.docx"')).toBe('informe final.docx');
-    expect(nombreDeDisposicion("attachment; filename*=UTF-8''c%C3%B3digo.zip")).toBe('código.zip');
-    expect(nombreDeDisposicion(null)).toBeNull();
+  it('anula por identificador de entrega y conserva el token en la solicitud', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(respuesta([entrega()])).mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    await api.calificaciones.anularEntrega('a1');
+    expect(fetchImpl.mock.calls[1][0]).toBe('/api/entregas/ent1');
+    expect(fetchImpl.mock.calls[1][1]).toMatchObject({ method: 'DELETE', headers: { Authorization: 'Bearer token' } });
   });
-
-  it('convierte el error estándar del backend en ApiError con su código y mensaje', async () => {
-    const f = fetchFalso([{ status: 422, cuerpo: { status: 422, codigo: 'FECHA_LIMITE_VENCIDA', mensaje: 'La fecha límite de la actividad ya venció.', traceId: 't' } }]);
-    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'tok', fetchImpl: f.impl });
-
-    const e = await api.estudiante.subirEntrega('d3', [{ nombre: 'p.pdf', tamano: 1, datos: new Blob(['x']) }]).catch((x) => x);
-    expect(e).toBeInstanceOf(ApiError);
-    expect([e.status, e.codigo, e.message]).toEqual([422, 'FECHA_LIMITE_VENCIDA', 'La fecha límite de la actividad ya venció.']);
+  it('lee las notas por actividad del contrato y nunca toma un borrador ni un sin calificar como nota', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(respuesta({ id: 'e1', nombre: 'Ana', rol: 'ESTUDIANTE' }))
+      .mockResolvedValueOnce(respuesta([{ id: 'c1', codigo: '603803', nombre: 'Simulación', pesoCorte1: 30, pesoCorte2: 30, pesoCorte3: 40 }]))
+      .mockResolvedValueOnce(respuesta([entrega({ actividadId: 'a2' })]))
+      .mockResolvedValueOnce(respuesta({ cursoId: 'c1', actividades: [
+        { actividadId: 'a1', titulo: 'Taller', corte: 1, peso: 20, fechaLimite: null, estado: 'PUBLICADA', nota: 4, retroalimentacion: 'Bien' },
+        { actividadId: 'a2', titulo: 'Proyecto', corte: 2, peso: 100, fechaLimite: '2026-10-31T23:59:59Z', estado: 'SIN_CALIFICAR', nota: null, retroalimentacion: null }] }));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    const califs = await api.calificaciones.delEstudiante('e1');
+    expect(fetchImpl.mock.calls[3][0]).toBe('/api/mis-notas/cursos/c1/actividades');
+    expect(califs.find(c => c.actividadId === 'a1')).toMatchObject({ nota: 4, estado: 'publicada', retro: 'Bien', entregado: null });
+    expect(califs.find(c => c.actividadId === 'a2')).toMatchObject({ nota: null, estado: null, archivo: 'x.pdf, y.png', tamano: 25, entregaId: 'ent1' });
+    expect(califs.find(c => c.actividadId === 'a2')?.archivos).toEqual([{ id: 'f1', nombre: 'x.pdf', tamano: 20 }, { id: 'f2', nombre: 'y.png', tamano: 5 }]);
   });
-
-  it('rechaza respuestas que no cumplen el contrato', async () => {
-    const f = fetchFalso([{ status: 200, cuerpo: { cursos: [{ cursoId: 'c1' }] } }]);
-    const api = createHttpApi({ baseUrl: '/api', getToken: () => null, fetchImpl: f.impl });
-
-    await expect(api.estudiante.matriz()).rejects.toThrow();
+  it('entrega varios archivos en un solo envío y reemplaza la entrega vigente con PUT', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(respuesta([entrega()])).mockResolvedValueOnce(respuesta(entrega()));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    await api.calificaciones.entregar('a1', [{ nombre: 'x.pdf', tamano: 3, datos: new Blob(['%PDF']) }, { nombre: 'y.png', tamano: 2, datos: new Blob(['ok']) }]);
+    expect(fetchImpl.mock.calls[1][0]).toBe('/api/entregas/ent1');
+    expect(fetchImpl.mock.calls[1][1].method).toBe('PUT');
+    expect((fetchImpl.mock.calls[1][1].body as FormData).getAll('archivo').map(f => (f as File).name)).toEqual(['x.pdf', 'y.png']);
+  });
+  it('descarga cada archivo por su identificador', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(new Response(new Blob(['%PDF'])));
+    const api = createHttpApi({ baseUrl: '/api', getToken: () => 'token', fetchImpl });
+    const url = await api.calificaciones.descargarArchivo('ent1', 'f2');
+    expect(fetchImpl.mock.calls[0][0]).toBe('/api/entregas/ent1/archivos/f2');
+    expect(url).toMatch(/^blob:/);
   });
 });

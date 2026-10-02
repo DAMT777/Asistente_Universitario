@@ -6,7 +6,6 @@ WORKDIR /src
 
 # 1) Solo los proyectos, para cachear el restore.
 COPY global.json Directory.Build.props Directory.Packages.props ./
-COPY services/compartido/Unillanos.ServiceDefaults/Unillanos.ServiceDefaults.csproj services/compartido/Unillanos.ServiceDefaults/
 COPY services/evaluaciones/src/Evaluaciones.Domain/Evaluaciones.Domain.csproj services/evaluaciones/src/Evaluaciones.Domain/
 COPY services/evaluaciones/src/Evaluaciones.Application/Evaluaciones.Application.csproj services/evaluaciones/src/Evaluaciones.Application/
 COPY services/evaluaciones/src/Evaluaciones.Infrastructure/Evaluaciones.Infrastructure.csproj services/evaluaciones/src/Evaluaciones.Infrastructure/
@@ -14,7 +13,6 @@ COPY services/evaluaciones/src/Evaluaciones.Api/Evaluaciones.Api.csproj services
 RUN dotnet restore services/evaluaciones/src/Evaluaciones.Api/Evaluaciones.Api.csproj
 
 # 2) El código y la publicación.
-COPY services/compartido/Unillanos.ServiceDefaults/ services/compartido/Unillanos.ServiceDefaults/
 COPY services/evaluaciones/src/ services/evaluaciones/src/
 RUN dotnet publish services/evaluaciones/src/Evaluaciones.Api/Evaluaciones.Api.csproj \
     -c Release -o /app/publish --no-restore /p:UseAppHost=false

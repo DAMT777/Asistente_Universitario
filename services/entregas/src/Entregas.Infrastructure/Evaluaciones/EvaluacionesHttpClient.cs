@@ -13,11 +13,12 @@ public sealed class EvaluacionesHttpClient(HttpClient http, ILogger<Evaluaciones
 {
     private const string Servicio = "Evaluaciones";
 
-    public async Task<ActividadInfo?> ObtenerActividadAsync(Guid actividadId, Guid estudianteId, CancellationToken ct)
+    public async Task<ActividadInfo?> ObtenerActividadAsync(Guid actividadId, Guid? estudianteId, CancellationToken ct)
     {
         try
         {
-            using var respuesta = await http.GetAsync($"internal/actividades/{actividadId}?estudianteId={estudianteId}", ct);
+            var consulta = estudianteId is { } id ? $"?estudianteId={id}" : "";
+            using var respuesta = await http.GetAsync($"internal/actividades/{actividadId}{consulta}", ct);
             if (respuesta.StatusCode == HttpStatusCode.NotFound) return null;
             if (!respuesta.IsSuccessStatusCode)
             {
@@ -50,7 +51,7 @@ public sealed class EvaluacionesHttpClient(HttpClient http, ILogger<Evaluaciones
         Guid ActividadId,
         Guid CursoId,
         Guid ProfesorId,
-        DateTimeOffset FechaLimite,
+        DateTimeOffset? FechaLimite,
         bool RequiereEntrega,
         bool EstudianteInscrito);
 }

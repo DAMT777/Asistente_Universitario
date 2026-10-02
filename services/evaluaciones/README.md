@@ -1,69 +1,73 @@
-# Servicio de Evaluaciones y cursos (puerto 5002) — parte del rol ESTUDIANTE
+# Servicio de evaluaciones y cursos
 
-CU-15 (nota y retroalimentación por actividad) y CU-16 (matriz de notas con cortes y definitiva parcial), más la consulta interna que usa Entregas.
-Contrato: [`contracts/evaluaciones.yaml`](../../contracts/evaluaciones.yaml). Base de datos propia `evaluaciones_db`.
+ASP.NET Core sobre .NET 10 con EF Core y SQL Server. Puerto local 5002.
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| GET | `/mis-notas` | Matriz por curso inscrito: cortes (nota publicada o `null`), `definitivaParcial` y `esParcial`. |
-| GET | `/mis-notas/cursos/{cursoId}/actividades` | Cada actividad del curso con su nota `PUBLICADA` o `SIN_CALIFICAR` (nota `null`). |
-| GET | `/internal/actividades/{id}?estudianteId=` | Solo servicio a servicio, con `X-Service-Key`. El gateway debe bloquear `/internal/**`. |
-| GET | `/health/live`, `/health/ready` | Salud (ready revisa SQL Server). |
+## Casos de uso implementados
 
-Reglas: el estudiante solo ve calificaciones `PUBLICADAS`; un borrador o una actividad sin calificar se muestran igual (`SIN_CALIFICAR`, nota `null`, nunca 0). La nota de cada corte sale de `PublicacionCorte` (última versión). La definitiva parcial se calcula en `Domain/Ponderado/CalculadoraPonderado.cs` y nunca se guarda. El redondeo de presentación (1 decimal, `AwayFromZero`, DA-01) está solo en `Domain/Ponderado/PoliticaRedondeo.cs`.
+| CU | Endpoint | Caso de uso |
+|----|----------|-------------|
+| CU-09 | `GET /cursos/{cursoId}/ponderado` y `GET /cursos/{cursoId}/ponderado/{estudianteId}` | `ConsultarPonderado` |
+| CU-10 | `POST /cursos/{cursoId}/cortes/{corte}/publicar` | `PublicarCorte` |
+| CU-11 | `PUT /cursos/{cursoId}/cortes/{corte}/estudiantes/{estudianteId}` | `CorregirCorte` |
+| CU-12 | `GET /cursos` y `GET /cursos/{cursoId}/actividades?soloPendientes=true` | `ListarCursos`, `ListarActividadesDelCurso` |
+| CU-15 | `GET /mis-notas/cursos/{cursoId}/actividades` (estudiante) | `ObtenerNotasActividades` |
+| CU-16 | `GET /mis-notas` (estudiante) | `ObtenerMatrizNotas` |
 
-## Variables de entorno
+CU-15 y CU-16 siguen `contracts/evaluaciones.yaml`: solo se leen calificaciones PUBLICADAS (un borrador o una actividad sin calificar salen como `SIN_CALIFICAR` con nota `null`), la nota de cada corte sale de `PublicacionCorte` y la definitiva parcial se calcula con `MotorPonderado` sobre los cortes publicados. Curso inexistente: 404; estudiante no inscrito: 403.
 
-| Variable | Ejemplo / valor por defecto |
-|---|---|
-| `ConnectionStrings__Default` | `Server=localhost,1433;Database=evaluaciones_db;User Id=sa;Password=...;TrustServerCertificate=True` |
-| `Jwt__PublicKeyPath` | `/keys/jwt-publica.pem` |
+Consulta interna para el servicio de entregas: `GET /internal/actividades/{actividadId}?estudianteId=` con el encabezado `X-Service-Key` (variable `ServiceKey`). Devuelve curso, profesor dueño, fecha límite (puede ser `null`), si requiere entrega y si el estudiante está inscrito. Sin llave configurada rechaza todo, y el gateway bloquea `/internal/**` desde fuera.
+
+Lecturas de apoyo que la pantalla del profesor necesita para CU-09, CU-10 y CU-11, y que en rigor son del frente B: `GET /cursos/{cursoId}/estudiantes` y `GET /actividades/{actividadId}/calificaciones`.
+
+## Estructura
+
+```
+src/
+  Evaluaciones.Domain/          entidades, MotorPonderado y excepciones de dominio
+  Evaluaciones.Application/     casos de uso, DTO e interfaces de repositorio
+  Evaluaciones.Infrastructure/  DbContext de EF Core y repositorios
+  Evaluaciones.Api/             controladores, JWT y middleware de errores
+tests/
+  Evaluaciones.UnitTests/         casos de uso y motor de ponderado, con repositorios en memoria
+  Evaluaciones.IntegrationTests/  la API real: JWT, roles, EF Core y casos de uso
+```
+
+## Configuración
+
+Mismos nombres de variable que la sección 10.5 de la guía técnica.
+
+En desarrollo no hace falta SQL Server: `appsettings.Development.json` activa `Database:UseInMemory`, que usa una base en memoria y carga los datos semilla de la guía (sección 9.8) al arrancar. Los datos se pierden al reiniciar. En cualquier otro entorno se usa SQL Server con la cadena de conexión: el esquema sale de las migraciones (`src/Evaluaciones.Infrastructure/Persistencia/Migraciones`), que se aplican al arrancar con `Database__AplicarMigraciones=true`, y en Development se carga la misma semilla.
+
+| Variable | Valor local de ejemplo |
+|----------|------------------------|
+| `Database__UseInMemory` | `true` (solo desarrollo) |
+| `ConnectionStrings__Default` | `Server=localhost,1433;Database=evaluaciones_db;User Id=sa;Password=<clave>;TrustServerCertificate=True` |
+| `Jwt__PublicKeyPath` | `../../../../infra/keys/jwt-public.pem` (ya viene en `appsettings.Development.json`) |
 | `Jwt__Issuer` / `Jwt__Audience` | `unillanos-usuarios` / `unillanos-notas` |
-| `ServiceKey` | Llave que debe enviar Entregas en `X-Service-Key` (mín. 16 caracteres) |
-| `Database__AplicarMigraciones` | `true` en Development; `false` por defecto |
+| `Database__AplicarMigraciones` | `true` para crear o actualizar el esquema en SQL Server al arrancar |
+| `ServiceKey` | Llave compartida con Entregas para `/internal/**` (mínimo 16 caracteres) |
 
-Con `ASPNETCORE_ENVIRONMENT=Development` se cargan los datos semilla (idempotentes, GUID fijos): curso 603803 (30/30/40), Taller 1 (abierta), Parcial 1 (sin entrega), Proyecto 1 (vencido); Ana con 4.0 y 3.0 publicados y corte 1 = 3.2; Luis con un borrador de 2.5; Marta sin notas. Las fechas límite son relativas al momento de la primera carga.
-
-## Correrlo
-
-Con Docker: ver `infra/docker-compose.yml` (lo levanta junto con Entregas, SQL Server y Azurite).
-
-Sin Docker para el servicio (SQL Server ya arriba):
+La cadena de conexión con contraseña va en `dotnet user-secrets` o en una variable de entorno, nunca en un archivo versionado:
 
 ```bash
-export ConnectionStrings__Default="Server=localhost,1433;Database=evaluaciones_db;User Id=sa;Password=<clave>;TrustServerCertificate=True"
-export Jwt__PublicKeyPath="$PWD/infra/keys/jwt-publica.pem"
-export ServiceKey="<llave compartida>"
-dotnet run --project services/evaluaciones/src/Evaluaciones.Api
+dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost,1433;Database=evaluaciones_db;User Id=sa;Password=<clave>;TrustServerCertificate=True" --project src/Evaluaciones.Api
 ```
 
-## Probarlo con curl
+## Comandos
 
 ```bash
-# E-13: Ana -> corte 1 = 3.2, definitivaParcial = 1.0, esParcial = true
-curl -s http://localhost:5002/mis-notas -H "Authorization: Bearer $(infra/scripts/generar-token.sh ana)"
-
-# E-14: Marta -> cortes null/false, definitivaParcial = 0.0
-curl -s http://localhost:5002/mis-notas -H "Authorization: Bearer $(infra/scripts/generar-token.sh marta)"
-
-# E-07: Luis -> Taller 1 SIN_CALIFICAR con nota null (no ve su borrador 2.5)
-curl -s http://localhost:5002/mis-notas/cursos/c0000000-0000-0000-0000-000000000001/actividades \
-  -H "Authorization: Bearer $(infra/scripts/generar-token.sh luis)"
-
-# No inscrito -> 403 SIN_PERMISO
-curl -s http://localhost:5002/mis-notas/cursos/c0000000-0000-0000-0000-000000000001/actividades \
-  -H "Authorization: Bearer $(infra/scripts/generar-token.sh pedro)"
-
-# Interno (como lo llama Entregas)
-curl -s "http://localhost:5002/internal/actividades/d0000000-0000-0000-0000-000000000001?estudianteId=b0000000-0000-0000-0000-000000000001" \
-  -H "X-Service-Key: <ServiceKey>"
+dotnet test Evaluaciones.slnx                        # 76 unitarias + 32 de integración (una usa SQL Server con Docker)
+dotnet run --project src/Evaluaciones.Api            # levanta en http://localhost:5002
 ```
 
-## Pruebas
+## Decisiones que conviene alinear con el equipo
 
-```bash
-dotnet test services/evaluaciones/tests/Evaluaciones.UnitTests
-dotnet test services/evaluaciones/tests/Evaluaciones.IntegrationTests   # requiere Docker
-```
+- **Ponderado del profesor (CU-09).** Incluye las calificaciones en borrador (sirven para la "nota fantasma") y las marca con `incluyeBorradores`. La definitiva parcial suma los cortes que ya tienen alguna actividad calificada. El corte sin calificaciones sale con nota `null`, nunca 0.
+- **Corregir un corte (CU-11).** Aplica la regla RN-12: solo cuenta lo publicado y rechaza si hay borradores. Como `PUT /actividades/{id}/calificaciones/{estudianteId}` deja la nota en borrador, el profesor tiene que publicar la actividad (CU-08) antes de corregir el corte. Si el frente B decide que modificar una calificación ya publicada la deja publicada, el flujo se acorta sin tocar este código.
+- **Publicar de nuevo (CU-10).** Si el estudiante ya tiene publicación en ese corte, se actualiza la misma fila en lugar de duplicarla.
+- **Actividad pendiente (CU-12).** Significa sin calificación publicada. Si el estudiante ya entregó lo sabe el servicio de entregas, y el frontend combina ambas respuestas con `/mis-entregas`.
+- **Redondeo (DA-01).** A un decimal, mitad hacia arriba, al publicar la nota del corte y al mostrar la definitiva.
 
-Las pruebas de integración usan SQL Server 2022 real (Testcontainers), cargan la semilla de Development y validan las respuestas contra `contracts/evaluaciones.yaml`.
+## Pendiente de otros frentes
+
+El resto de endpoints de cursos, actividades y calificaciones del profesor (crear y editar actividades, pesos, calificar y publicar notas de actividad: CU-05 a CU-08). Esos endpoints aún no están en `contracts/evaluaciones.yaml`.

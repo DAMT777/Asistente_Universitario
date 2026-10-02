@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { NOTA_MAX, NOTA_MIN } from '@/domain/reglas';
-import { formatoTamano } from '@/domain/archivos';
 
 export const loginSchema = z.object({
   usuario: z.string().trim().min(1, 'Escribe tu usuario.'),
@@ -36,10 +35,11 @@ export const actividadInputSchema = (hoy: string) =>
     titulo: z.string().trim().min(3, 'El título necesita al menos 3 caracteres.').max(120),
     corte: z.coerce.number().int().min(1).max(3) as unknown as z.ZodType<1 | 2 | 3>,
     peso: pesoEntero,
-    vence: z
-      .string()
-      .min(1, 'Elige una fecha.')
-      .refine((f) => f >= hoy, 'No puede ser anterior a hoy.'),
+    vence: z.string(),
+    requiereEntrega: z.boolean(),
+  }).superRefine((a, ctx) => {
+    if (a.requiereEntrega && !a.vence) ctx.addIssue({ code: 'custom', path: ['vence'], message: 'Elige la fecha y hora límite.' });
+    if (a.vence && (!Number.isFinite(Date.parse(a.vence)) || Date.parse(a.vence) < Date.parse(hoy))) ctx.addIssue({ code: 'custom', path: ['vence'], message: 'La fecha debe ser válida y posterior a la hora actual.' });
   });
 export type ActividadInput = z.infer<ReturnType<typeof actividadInputSchema>>;
 
@@ -52,31 +52,34 @@ export const pesosCursoSchema = z.object({
 export type PesosCursoInput = z.infer<typeof pesosCursoSchema>;
 
 /**
- * Mismas reglas y valores por defecto que el servicio de Entregas
- * (Entregas__MaxBytes, Entregas__MaxBytesTotal, Entregas__MaxArchivos). El backend además valida la firma del contenido.
+ * Mismas reglas y valores por defecto que el servicio de entregas (Entregas__MaxBytes, Entregas__MaxBytesTotal,
+ * Entregas__MaxArchivos). El backend además revisa que el contenido corresponda a la extensión.
  */
 export const EXTENSIONES_ENTREGA = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'png', 'jpg', 'jpeg'] as const;
-export const TAMANO_MAX_ARCHIVO = 20 * 1024 * 1024;
-export const TAMANO_MAX_ENTREGA = 50 * 1024 * 1024;
+/** Máximo por archivo. */
+export const TAMANO_MAX_ENTREGA = 20 * 1024 * 1024;
+/** Máximo de la suma de archivos de una entrega. */
+export const TAMANO_MAX_TOTAL_ENTREGA = 50 * 1024 * 1024;
 export const MAX_ARCHIVOS_ENTREGA = 10;
 
-export const archivoEntregaSchema = z
-  .object({ nombre: z.string(), tamano: z.number(), datos: z.unknown().optional() })
-  .superRefine((a, ctx) => {
-    if (!EXTENSIONES_ENTREGA.some((e) => a.nombre.toLowerCase().endsWith('.' + e)))
-      ctx.addIssue({ code: 'custom', path: ['nombre'], message: `"${a.nombre}": formato no admitido. Usa PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG.` });
-    else if (a.tamano <= 0)
-      ctx.addIssue({ code: 'custom', path: ['tamano'], message: `"${a.nombre}" está vacío.` });
-    else if (a.tamano > TAMANO_MAX_ARCHIVO)
-      ctx.addIssue({ code: 'custom', path: ['tamano'], message: `"${a.nombre}" supera ${formatoTamano(TAMANO_MAX_ARCHIVO)}.` });
-  });
+const megas = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`;
+
+export const archivoEntregaSchema = z.object({
+  nombre: z
+    .string()
+    .refine((n) => EXTENSIONES_ENTREGA.some((e) => n.toLowerCase().endsWith('.' + e)), 'Formato no admitido. Usa PDF, Word, Excel, PowerPoint, ZIP, PNG o JPG.'),
+  tamano: z.number().positive('El archivo está vacío.').max(TAMANO_MAX_ENTREGA, `El archivo supera ${megas(TAMANO_MAX_ENTREGA)}.`),
+  datos: z.unknown().optional(),
+});
 
 /** Todos los archivos de una entrega: cada uno válido, sin pasar la cantidad ni el total permitidos. */
 export const seleccionEntregaSchema = z
   .array(archivoEntregaSchema)
   .min(1, 'Elige al menos un archivo.')
   .max(MAX_ARCHIVOS_ENTREGA, `Puedes entregar hasta ${MAX_ARCHIVOS_ENTREGA} archivos.`)
-  .refine((xs) => xs.reduce((s, a) => s + a.tamano, 0) <= TAMANO_MAX_ENTREGA, `Los archivos suman más de ${formatoTamano(TAMANO_MAX_ENTREGA)}.`);
+  .refine((xs) => xs.reduce((s, a) => s + a.tamano, 0) <= TAMANO_MAX_TOTAL_ENTREGA, `Los archivos suman más de ${megas(TAMANO_MAX_TOTAL_ENTREGA)}.`);
+
+export const publicacionCorteSchema = z.object({ cursoId: z.string(), estudianteId: z.string(), corte: z.union([z.literal(1), z.literal(2), z.literal(3)]), nota: z.number().min(0).max(5), fechaPublicacion: z.string() });
 
 // Contratos de respuesta del backend (validación en el borde de la api).
 export const cursoSchema = z.object({
@@ -86,35 +89,12 @@ export const cursoSchema = z.object({
 });
 export const actividadSchema = z.object({
   id: z.string(), cursoId: z.string(), corte: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  titulo: z.string(), peso: z.number(), vence: z.string(),
+  titulo: z.string(), peso: z.number(), vence: z.string().nullable().transform(v => v ?? ''), requiereEntrega: z.boolean(),
 });
 export const calificacionSchema = z.object({
   actividadId: z.string(), estudianteId: z.string(), entregado: z.string().nullable(), archivo: z.string().nullable(),
-  nota: z.number().nullable(), estado: z.enum(['borrador', 'publicada']).nullable(), retro: z.string(),
+  nota: z.number().nullable(), estado: z.enum(['borrador', 'publicada']).nullable(), retro: z.string(), tamano: z.number().optional(), urlArchivo: z.string().optional(),
 });
-// Rol estudiante: mismas formas que contracts/evaluaciones.yaml y contracts/entregas.yaml.
-const corteSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
-export const matrizNotasSchema = z.object({
-  cursos: z.array(z.object({
-    cursoId: z.string(), codigo: z.string(), nombre: z.string(), profesor: z.string(),
-    cortes: z.array(z.object({ corte: corteSchema, pesoCorte: z.number(), nota: z.number().nullable(), publicado: z.boolean() })),
-    definitivaParcial: z.number(), esParcial: z.boolean(),
-  })),
-});
-export const notasActividadesSchema = z.object({
-  cursoId: z.string(),
-  actividades: z.array(z.object({
-    actividadId: z.string(), titulo: z.string(), corte: corteSchema, peso: z.number(), fechaLimite: z.string(),
-    estado: z.enum(['PUBLICADA', 'SIN_CALIFICAR']), nota: z.number().nullable(), retroalimentacion: z.string().nullable(),
-  })),
-});
-export const entregaSchema = z.object({
-  id: z.string(), actividadId: z.string(), estudianteId: z.string(), fechaEnvio: z.string(),
-  estado: z.enum(['ENVIADA', 'ANULADA']),
-  archivos: z.array(z.object({ id: z.string(), nombreArchivo: z.string(), tamano: z.number() })),
-  tamanoTotal: z.number(),
-});
-
 export const usuarioSchema = z.object({ id: z.string(), nombre: z.string(), codigo: z.string(), rol: z.enum(['estudiante', 'docente']) });
 export const sesionSchema = z.object({ token: z.string(), usuario: usuarioSchema });
 

@@ -11,6 +11,14 @@
 - Base de datos: nueva tabla `ArchivoEntrega` (migración `ArchivosMultiples`, que copia el archivo de cada entrega existente antes de quitar las columnas de `Entrega`).
 - Pendiente de decidir: hoy el límite es del sistema. Si cada docente debe fijar el límite de su actividad, hay que agregar el campo a `Actividad` y a `GET /internal/actividades/{id}`.
 
+### B. Integración con la rama Bengi_Fish (frontend final, gateway, usuarios y CU-09 a CU-12)
+
+- `fechaLimite` puede ser `null` en `GET /mis-notas/cursos/{id}/actividades` y en `GET /internal/actividades/{id}`: en Evaluaciones la fecha es opcional. Entregas trata una actividad sin fecha como siempre abierta.
+- `estudianteId` es opcional en `GET /internal/actividades/{id}`: Entregas lo omite cuando consulta un profesor y usa `profesorId` para aplicar RN-15.
+- Nuevo `GET /actividades/{actividadId}/entregas` (profesor dueño) y descarga de archivos también para el profesor dueño: los necesita la pantalla de calificar.
+- Los errores de Evaluaciones salen como `application/problem+json`, igual que en el resto de servicios.
+- Pendiente de alinear: en CU-12 un estudiante no inscrito recibe 404 y en CU-15 recibe 403 (RN-16).
+
 ## Propuestas pendientes
 
 No se cambió en silencio ningún contrato. `contracts/entregas.yaml` y `contracts/evaluaciones.yaml` reflejan lo acordado.

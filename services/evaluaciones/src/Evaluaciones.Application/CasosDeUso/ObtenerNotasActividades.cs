@@ -1,64 +1,42 @@
-using Evaluaciones.Application.Puertos;
-using Evaluaciones.Domain;
+using Evaluaciones.Application.Abstracciones;
+using Evaluaciones.Application.Dtos;
+using Evaluaciones.Domain.Errores;
 
 namespace Evaluaciones.Application.CasosDeUso;
 
-public sealed record NotasActividadesRespuesta(Guid CursoId, IReadOnlyList<NotaActividadRespuesta> Actividades);
-
-public sealed record NotaActividadRespuesta(
-    Guid ActividadId,
-    string Titulo,
-    int Corte,
-    decimal Peso,
-    DateTime FechaLimite,
-    string Estado,
-    decimal? Nota,
-    string? Retroalimentacion);
-
-public static class EstadosNotaEstudiante
+/// <summary>
+/// CU-15. Nota y retroalimentación del estudiante en cada actividad del curso. Solo se leen calificaciones
+/// PUBLICADAS: un borrador o una actividad sin calificar salen como SIN_CALIFICAR con nota null (RN-08, RN-09).
+/// El curso debe existir (404) y el estudiante debe estar inscrito (403, RN-16).
+/// </summary>
+public sealed class ObtenerNotasActividades(
+    ICursoRepository cursos,
+    IInscripcionRepository inscripciones,
+    IActividadRepository actividades,
+    ICalificacionRepository calificaciones)
 {
     public const string Publicada = "PUBLICADA";
     public const string SinCalificar = "SIN_CALIFICAR";
-}
 
-/// <summary>
-/// CU-15: nota y retroalimentación por actividad. Un borrador o una actividad sin calificar
-/// se muestran igual: SIN_CALIFICAR con nota null (RN-08, RN-09). Sin calificar no es 0.
-/// </summary>
-public sealed class ObtenerNotasActividades(
-    VerificadorInscripcion inscripcion,
-    IActividadRepositorio actividades,
-    ICalificacionRepositorio calificaciones)
-{
-    public async Task<NotasActividadesRespuesta> EjecutarAsync(Guid cursoId, Guid estudianteId, CancellationToken ct)
+    public async Task<NotasActividadesDto> EjecutarAsync(Guid estudianteId, Guid cursoId, CancellationToken ct)
     {
-        await inscripcion.ExigirAsync(cursoId, estudianteId, ct);
+        _ = await cursos.ObtenerAsync(cursoId, ct)
+            ?? throw new DominioException(CodigosError.NoEncontrado, "El curso no existe.");
+        if (!await inscripciones.EstaInscritoAsync(cursoId, estudianteId, ct))
+            throw new DominioException(CodigosError.SinPermiso, "No estás inscrito en este curso.");
 
-        var delCurso = await actividades.ListarDeCursoAsync(cursoId, ct);
-        var publicadas = (await calificaciones.ListarPublicadasAsync(estudianteId, delCurso.Select(a => a.Id).ToList(), ct))
-            .Where(c => c.EsVisibleParaEstudiante)
+        var delCurso = await actividades.ListarActividadesAsync(cursoId, ct);
+        var publicadas = (await calificaciones.ListarCalificacionesPublicadasAsync(estudianteId, ct))
             .ToDictionary(c => c.ActividadId);
 
         var filas = delCurso
-            .OrderBy(a => a.Corte).ThenBy(a => a.FechaLimite).ThenBy(a => a.Titulo, StringComparer.Ordinal)
+            .OrderBy(a => a.Corte).ThenBy(a => a.FechaLimite is null).ThenBy(a => a.FechaLimite).ThenBy(a => a.Titulo)
             .Select(a => publicadas.TryGetValue(a.Id, out var c)
-                ? new NotaActividadRespuesta(a.Id, a.Titulo, a.Corte, a.Peso, Utc(a.FechaLimite), EstadosNotaEstudiante.Publicada, c.Valor, c.Retroalimentacion)
-                : new NotaActividadRespuesta(a.Id, a.Titulo, a.Corte, a.Peso, Utc(a.FechaLimite), EstadosNotaEstudiante.SinCalificar, null, null))
+                ? new NotaActividadDto(a.Id, a.Titulo, a.Corte, a.Peso, a.FechaLimite, Publicada, c.Valor,
+                    string.IsNullOrWhiteSpace(c.Retroalimentacion) ? null : c.Retroalimentacion)
+                : new NotaActividadDto(a.Id, a.Titulo, a.Corte, a.Peso, a.FechaLimite, SinCalificar, null, null))
             .ToList();
 
-        return new NotasActividadesRespuesta(cursoId, filas);
-    }
-
-    private static DateTime Utc(DateTime fecha) => DateTime.SpecifyKind(fecha, DateTimeKind.Utc);
-}
-
-/// <summary>RN-16: el curso debe existir (404) y el estudiante debe estar inscrito (403).</summary>
-public sealed class VerificadorInscripcion(ICursoRepositorio cursos)
-{
-    public async Task ExigirAsync(Guid cursoId, Guid estudianteId, CancellationToken ct)
-    {
-        _ = await cursos.ObtenerAsync(cursoId, ct) ?? throw new NoEncontradoException("El curso");
-        if (!await cursos.EstaInscritoAsync(cursoId, estudianteId, ct))
-            throw new SinPermisoException("El estudiante no está inscrito en el curso.");
+        return new NotasActividadesDto(cursoId, filas);
     }
 }

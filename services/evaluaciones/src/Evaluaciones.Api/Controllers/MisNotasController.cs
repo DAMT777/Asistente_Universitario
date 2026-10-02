@@ -1,27 +1,24 @@
+using Evaluaciones.Api.Seguridad;
+using Evaluaciones.Application.CasosDeUso;
+using Evaluaciones.Application.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Evaluaciones.Application.CasosDeUso;
-using Unillanos.ServiceDefaults.Errores;
-using Unillanos.ServiceDefaults.Seguridad;
 
 namespace Evaluaciones.Api.Controllers;
 
-/// <summary>CU-15 y CU-16 del rol ESTUDIANTE.</summary>
+/// <summary>CU-15 y CU-16 del rol estudiante. Solo recibe la petición y delega en un caso de uso.</summary>
 [ApiController]
+[Authorize(Policy = Politicas.Estudiante)]
 [Route("mis-notas")]
-[Authorize(Policy = Politicas.SoloEstudiante)]
-[ProducesResponseType<ErrorApi>(StatusCodes.Status401Unauthorized, EscritorErrores.ContentType)]
-[ProducesResponseType<ErrorApi>(StatusCodes.Status403Forbidden, EscritorErrores.ContentType)]
-public sealed class MisNotasController : ControllerBase
+public sealed class MisNotasController(ObtenerMatrizNotas matriz, ObtenerNotasActividades notasActividades) : ControllerBase
 {
+    /// <summary>CU-16. Matriz de notas con cortes publicados y definitiva parcial.</summary>
     [HttpGet]
-    [ProducesResponseType<MatrizNotasRespuesta>(StatusCodes.Status200OK)]
-    public Task<MatrizNotasRespuesta> Matriz([FromServices] ObtenerMatrizNotas casoDeUso, CancellationToken ct)
-        => casoDeUso.EjecutarAsync(User.ObtenerUsuarioId(), ct);
+    public async Task<ActionResult<MatrizNotasDto>> Matriz(CancellationToken ct) =>
+        Ok(await matriz.EjecutarAsync(User.ObtenerId(), ct));
 
-    [HttpGet("cursos/{cursoId}/actividades")]
-    [ProducesResponseType<NotasActividadesRespuesta>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ErrorApi>(StatusCodes.Status404NotFound, EscritorErrores.ContentType)]
-    public Task<NotasActividadesRespuesta> Actividades(Guid cursoId, [FromServices] ObtenerNotasActividades casoDeUso, CancellationToken ct)
-        => casoDeUso.EjecutarAsync(cursoId, User.ObtenerUsuarioId(), ct);
+    /// <summary>CU-15. Nota publicada y retroalimentación de cada actividad del curso.</summary>
+    [HttpGet("cursos/{cursoId:guid}/actividades")]
+    public async Task<ActionResult<NotasActividadesDto>> Actividades(Guid cursoId, CancellationToken ct) =>
+        Ok(await notasActividades.EjecutarAsync(User.ObtenerId(), cursoId, ct));
 }

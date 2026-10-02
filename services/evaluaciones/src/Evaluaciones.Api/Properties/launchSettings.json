@@ -1,9 +1,7 @@
 {
-  "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "evaluaciones": {
+    "Evaluaciones.Api": {
       "commandName": "Project",
-      "launchBrowser": false,
       "applicationUrl": "http://localhost:5002",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

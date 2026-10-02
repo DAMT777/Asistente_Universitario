@@ -1,11 +1,16 @@
-# Entorno local. Desde infra/:
-#   cp .env.example .env            (y edite los valores)
-#   ./scripts/generar-llaves.sh     (llaves JWT de desarrollo en infra/keys)
-#   docker compose up --build
+# Entorno local completo. Desde la raíz del repositorio:
+#   cp infra/.env.example infra/.env        (y edite los valores)
+#   infra/scripts/generar-llaves.sh         (llaves JWT de desarrollo en infra/keys)
+#   docker compose -f infra/docker-compose.yml up --build
 #
-# Usuarios (5001) y el API Gateway (5000) los agregan sus responsables; este archivo trae
-# Evaluaciones y cursos (5002), Entregas (5003) y sus dependencias.
+# El frontend entra solo por el API Gateway (http://localhost:5000):
+#   cd Frontend/Interfaz/code && VITE_API_URL=http://localhost:5000 npm run dev
 name: unillanos-notas
+
+x-jwt: &jwt
+  Jwt__Issuer: unillanos-usuarios
+  Jwt__Audience: unillanos-notas
+  Jwt__PublicKeyPath: /keys/jwt-public.pem
 
 services:
   sqlserver:
@@ -33,22 +38,38 @@ services:
     volumes:
       - azuritedata:/data
 
+  # Login y emisión del JWT RS256 (usuarios de prueba solo en Development, contraseña Demo1234!).
+  usuarios:
+    build:
+      context: ..
+      dockerfile: services/usuarios/Dockerfile
+    # La llave privada de desarrollo solo la puede leer su dueño (permiso 600): el contenedor corre con su UID.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Issuer: unillanos-usuarios
+      Jwt__Audience: unillanos-notas
+      Jwt__PrivateKeyPath: /keys/jwt-private.pem
+    ports:
+      - "5001:8080"
+    volumes:
+      - ./keys:/keys:ro
+
   evaluaciones:
     build:
       context: ..
       dockerfile: services/evaluaciones/Dockerfile
     environment:
+      <<: *jwt
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Default: "Server=sqlserver,1433;Database=evaluaciones_db;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
-      Jwt__PublicKeyPath: /keys/jwt-publica.pem
-      Jwt__Issuer: unillanos-usuarios
-      Jwt__Audience: unillanos-notas
-      ServiceKey: ${SERVICE_KEY:?Defina SERVICE_KEY en infra/.env}
+      Database__UseInMemory: "false"
       Database__AplicarMigraciones: "true"
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=evaluaciones_db;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      ServiceKey: ${SERVICE_KEY:?Defina SERVICE_KEY en infra/.env}
     ports:
       - "5002:8080"
     volumes:
-      - ./keys/jwt-publica.pem:/keys/jwt-publica.pem:ro
+      - ./keys/jwt-public.pem:/keys/jwt-public.pem:ro
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -58,11 +79,9 @@ services:
       context: ..
       dockerfile: services/entregas/Dockerfile
     environment:
+      <<: *jwt
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=entregas_db;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
-      Jwt__PublicKeyPath: /keys/jwt-publica.pem
-      Jwt__Issuer: unillanos-usuarios
-      Jwt__Audience: unillanos-notas
       ServiceKey: ${SERVICE_KEY:?Defina SERVICE_KEY en infra/.env}
       Services__EvaluacionesBaseUrl: http://evaluaciones:8080
       Services__EvaluacionesTimeoutSegundos: "3"
@@ -76,7 +95,7 @@ services:
     ports:
       - "5003:8080"
     volumes:
-      - ./keys/jwt-publica.pem:/keys/jwt-publica.pem:ro
+      - ./keys/jwt-public.pem:/keys/jwt-public.pem:ro
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -84,6 +103,26 @@ services:
         condition: service_started
       evaluaciones:
         condition: service_started
+
+  # Único punto de entrada del frontend: valida el JWT, aplica CORS, bloquea /internal/** y enruta.
+  gateway:
+    build:
+      context: ..
+      dockerfile: services/gateway/Dockerfile
+    environment:
+      <<: *jwt
+      Cors__AllowedOrigins__0: http://localhost:5173
+      ReverseProxy__Clusters__usuarios__Destinations__principal__Address: http://usuarios:8080/
+      ReverseProxy__Clusters__evaluaciones__Destinations__principal__Address: http://evaluaciones:8080/
+      ReverseProxy__Clusters__entregas__Destinations__principal__Address: http://entregas:8080/
+    ports:
+      - "5000:8080"
+    volumes:
+      - ./keys/jwt-public.pem:/keys/jwt-public.pem:ro
+    depends_on:
+      - usuarios
+      - evaluaciones
+      - entregas
 
 volumes:
   sqldata:

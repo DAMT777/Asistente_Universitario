@@ -53,6 +53,32 @@ paths:
           $ref: "#/components/responses/ReglaIncumplida"
         "503":
           $ref: "#/components/responses/ServicioNoDisponible"
+    get:
+      operationId: listarEntregasDeActividad
+      summary: Entregas de todos los estudiantes en la actividad (pantalla de calificar del profesor).
+      description: "Solo el profesor dueño del curso (RN-15); el dato lo confirma Evaluaciones por /internal. Incluye entregas enviadas y anuladas."
+      tags: [Entregas]
+      parameters:
+        - $ref: "#/components/parameters/ActividadId"
+      responses:
+        "200":
+          description: Entregas de la actividad.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Entrega"
+        "400":
+          $ref: "#/components/responses/ValidacionFallida"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicioNoDisponible"
   /entregas/{entregaId}:
     put:
       operationId: editarEntrega
@@ -119,8 +145,8 @@ paths:
   /entregas/{entregaId}/archivos/{archivoId}:
     get:
       operationId: descargarArchivo
-      summary: Descarga un archivo de una entrega propia con su nombre original.
-      description: "Responde el contenido con Content-Type del archivo y Content-Disposition attachment (filename*=UTF-8). Disponible aunque la fecha límite haya vencido. Un archivo o una entrega ajena responde 404."
+      summary: Descarga un archivo de una entrega con su nombre original.
+      description: "Puede descargarlo el estudiante dueño de la entrega o el profesor dueño del curso. Responde el contenido con Content-Type del archivo y Content-Disposition attachment (filename*=UTF-8). Disponible aunque la fecha límite haya vencido. Una entrega ajena responde 404 al estudiante y 403 a otro profesor."
       tags: [Entregas]
       parameters:
         - $ref: "#/components/parameters/EntregaId"
@@ -141,6 +167,8 @@ paths:
           $ref: "#/components/responses/SinPermiso"
         "404":
           $ref: "#/components/responses/NoEncontrado"
+        "503":
+          $ref: "#/components/responses/ServicioNoDisponible"
   /mis-entregas:
     get:
       operationId: listarMisEntregas

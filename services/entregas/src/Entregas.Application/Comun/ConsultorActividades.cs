@@ -14,4 +14,14 @@ public sealed class ConsultorActividades(IEvaluacionesClient evaluaciones)
             throw new SinPermisoException("El estudiante no está inscrito en el curso de la actividad.");
         return actividad;
     }
+
+    /// <summary>RN-15: solo el profesor dueño del curso de la actividad.</summary>
+    public async Task<ActividadInfo> ObtenerParaProfesorAsync(Guid actividadId, Guid profesorId, CancellationToken ct)
+    {
+        var actividad = await evaluaciones.ObtenerActividadAsync(actividadId, estudianteId: null, ct)
+                        ?? throw new NoEncontradoException("La actividad");
+        if (actividad.ProfesorId != profesorId)
+            throw new SinPermisoException("La actividad pertenece al curso de otro profesor.");
+        return actividad;
+    }
 }

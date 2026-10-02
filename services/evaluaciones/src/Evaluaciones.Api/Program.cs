@@ -1,31 +1,102 @@
-using Evaluaciones.Api;
+using System.Security.Cryptography;
+using Evaluaciones.Api.Middleware;
 using Evaluaciones.Api.Seguridad;
 using Evaluaciones.Application;
+using Evaluaciones.Domain;
+using Evaluaciones.Domain.Errores;
 using Evaluaciones.Infrastructure;
 using Evaluaciones.Infrastructure.Persistencia;
-using Unillanos.ServiceDefaults;
-using Unillanos.ServiceDefaults.Errores;
-using Unillanos.ServiceDefaults.Salud;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.AddServiceDefaults();
 
-builder.Services.AddAplicacionEvaluaciones();
-builder.Services.AddInfraestructuraEvaluaciones(builder.Configuration);
-builder.Services.AddClaveServicio();
-builder.Services.AddTraductorExcepciones<TraductorExcepcionesEvaluaciones>();
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<EvaluacionesDbContext>("sql", tags: [SaludExtensions.EtiquetaReady]);
+builder.Services.AddAplicacion();
+builder.Services.AddInfraestructura(builder.Configuration);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks().AddDbContextCheck<EvaluacionesDbContext>("base-de-datos", tags: ["ready"]);
+
+// El token lo firma el servicio de usuarios (RS256). Aquí solo se verifica con la llave pública (sección 12.1).
+var jwt = builder.Configuration.GetSection("Jwt");
+var rutaLlave = jwt["PublicKeyPath"];
+if (string.IsNullOrWhiteSpace(rutaLlave))
+    throw new InvalidOperationException("Falta Jwt:PublicKeyPath (variable Jwt__PublicKeyPath).");
+
+var rsa = RSA.Create();
+rsa.ImportFromPem(File.ReadAllText(Path.GetFullPath(rutaLlave, builder.Environment.ContentRootPath)));
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opciones =>
+    {
+        opciones.MapInboundClaims = false; // conserva los nombres sub y rol tal como vienen en el token
+        opciones.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwt["Issuer"],
+            ValidateAudience = true,
+            ValidAudience = jwt["Audience"],
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new RsaSecurityKey(rsa),
+            ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
+            NameClaimType = "sub",
+            RoleClaimType = "rol",
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+        opciones.Events = new JwtBearerEvents
+        {
+            OnChallenge = contexto =>
+            {
+                contexto.HandleResponse();
+                var expirado = contexto.AuthenticateFailure is SecurityTokenExpiredException;
+                return RespuestaError.EscribirAsync(
+                    contexto.HttpContext,
+                    StatusCodes.Status401Unauthorized,
+                    expirado ? CodigosError.TokenExpirado : CodigosError.NoAutenticado,
+                    expirado ? "El token expiró. Inicia sesión de nuevo." : "Falta el token o no es válido.");
+            },
+            OnForbidden = contexto => RespuestaError.EscribirAsync(
+                contexto.HttpContext,
+                StatusCodes.Status403Forbidden,
+                CodigosError.SinPermiso,
+                "Tu rol no permite esta acción.")
+        };
+    });
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(Politicas.Profesor, p => p.RequireRole(Roles.Profesor))
+    .AddPolicy(Politicas.Estudiante, p => p.RequireRole(Roles.Estudiante));
+builder.Services.AddScoped<ClaveServicioFilter>();
 
 var app = builder.Build();
-app.UseServiceDefaults();
 
-await using (var scope = app.Services.CreateAsyncScope())
+// Con SQL Server el esquema sale de las migraciones (Database__AplicarMigraciones=true, por ejemplo en docker compose).
+if (!DependenciaInfraestructura.UsaBaseEnMemoria(app.Configuration) && app.Configuration.GetValue<bool>("Database:AplicarMigraciones"))
 {
-    if (app.Configuration.GetValue<bool>("Database:AplicarMigraciones"))
-        await scope.ServiceProvider.GetRequiredService<InicializadorBaseDatos>().AplicarMigracionesAsync(CancellationToken.None);
-    if (app.Environment.IsDevelopment())
-        await scope.ServiceProvider.GetRequiredService<SemillaDesarrollo>().CargarAsync(CancellationToken.None);
+    using var alcance = app.Services.CreateScope();
+    await alcance.ServiceProvider.GetRequiredService<EvaluacionesDbContext>().Database.MigrateAsync();
 }
 
-await app.RunAsync();
+// Datos semilla de la guía (9.8), solo en desarrollo y una sola vez, con base en memoria o SQL Server.
+if (app.Environment.IsDevelopment())
+    await SemillaDesarrollo.AplicarAsync(app.Services, app.Services.GetRequiredService<TimeProvider>());
+
+app.UseMiddleware<ManejadorErroresMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+    app.MapOpenApi();
+
+app.MapControllers();
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") });
+
+app.Run();
+
+public partial class Program;

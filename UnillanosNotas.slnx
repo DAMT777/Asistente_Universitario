@@ -26,4 +26,18 @@
     <Project Path="services/evaluaciones/tests/Evaluaciones.IntegrationTests/Evaluaciones.IntegrationTests.csproj" />
     <Project Path="services/evaluaciones/tests/Evaluaciones.UnitTests/Evaluaciones.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/services/gateway/" />
+  <Folder Name="/services/gateway/src/">
+    <Project Path="services/gateway/src/Gateway.Api/Gateway.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/gateway/tests/">
+    <Project Path="services/gateway/tests/Gateway.IntegrationTests/Gateway.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/services/usuarios/" />
+  <Folder Name="/services/usuarios/src/">
+    <Project Path="services/usuarios/src/Usuarios.Api/Usuarios.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/usuarios/tests/">
+    <Project Path="services/usuarios/tests/Usuarios.IntegrationTests/Usuarios.IntegrationTests.csproj" />
+  </Folder>
 </Solution>

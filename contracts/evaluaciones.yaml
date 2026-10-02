@@ -79,7 +79,8 @@ paths:
             format: uuid
         - name: estudianteId
           in: query
-          required: true
+          required: false
+          description: "Si se envía, estudianteInscrito indica si está inscrito; sin él es false (Entregas lo omite cuando consulta un profesor)."
           schema:
             type: string
             format: uuid
@@ -212,8 +213,9 @@ components:
           minimum: 0
           maximum: 100
         fechaLimite:
-          type: string
+          type: [string, "null"]
           format: date-time
+          description: UTC; null si la actividad no tiene fecha límite.
         estado:
           type: string
           enum: [PUBLICADA, SIN_CALIFICAR]
@@ -238,9 +240,9 @@ components:
           type: string
           format: uuid
         fechaLimite:
-          type: string
+          type: [string, "null"]
           format: date-time
-          description: UTC, ISO 8601.
+          description: "UTC, ISO 8601; null si la actividad no tiene fecha límite (Entregas la trata como abierta)."
         requiereEntrega:
           type: boolean
         estudianteInscrito:

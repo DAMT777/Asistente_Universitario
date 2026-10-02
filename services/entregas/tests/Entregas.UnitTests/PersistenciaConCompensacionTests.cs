@@ -46,6 +46,7 @@ public sealed class PersistenciaConCompensacionTests
         public Task<Entrega?> ObtenerAsync(Guid entregaId, CancellationToken ct) => Task.FromResult<Entrega?>(null);
         public Task<Entrega?> ObtenerPorActividadYEstudianteAsync(Guid actividadId, Guid estudianteId, CancellationToken ct) => Task.FromResult<Entrega?>(null);
         public Task<IReadOnlyList<Entrega>> ListarDelEstudianteAsync(Guid estudianteId, Guid? actividadId, CancellationToken ct) => Task.FromResult<IReadOnlyList<Entrega>>([]);
+        public Task<IReadOnlyList<Entrega>> ListarDeActividadAsync(Guid actividadId, CancellationToken ct) => Task.FromResult<IReadOnlyList<Entrega>>([]);
         public void Agregar(Entrega entrega) { }
         public virtual Task GuardarCambiosAsync(CancellationToken ct) => Task.CompletedTask;
     }

@@ -1,8 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <ProjectReference Include="..\Evaluaciones.Domain\Evaluaciones.Domain.csproj" />
-  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Evaluaciones.Domain\Evaluaciones.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

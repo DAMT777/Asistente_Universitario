@@ -1,16 +1,17 @@
 import { useMemo } from 'react';
-import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
-import type { Actividad, Calificacion, Curso, EstadoEstudiante, Entrega, NotasActividades, ResumenCurso } from '@/types';
-import { actividadDesdeNota, calificacionDesde, cursoDesdeMatriz, describirNecesidad, estadoEstudiante, resumenDesdeMatriz } from '@/domain';
+import { useQuery } from '@tanstack/react-query';
+import type { Actividad, Calificacion, Curso, EstadoEstudiante, ResumenCurso } from '@/types';
+import { estadoEstudiante, resumenCurso } from '@/domain';
 import { useApi } from './ApiContext';
 import { useUsuario } from './useSesion';
+import { useActividades, useCursos } from './useCursos';
+import { usePublicaciones } from './usePublicaciones';
+import { calcularNecesidad } from '@/domain';
 import { qk } from './queryKeys';
 
 export interface ActividadEstudiante {
   actividad: Actividad;
   calificacion: Calificacion | undefined;
-  /** Entrega propia (enviada o anulada), si existe. */
-  entrega: Entrega | undefined;
   estado: EstadoEstudiante;
 }
 
@@ -22,55 +23,47 @@ export interface NotasCurso {
   entregas: number;
 }
 
-/** Une los resultados de varias consultas en uno solo, estable entre renders. */
-function combinar(resultados: UseQueryResult<NotasActividades>[]) {
-  return {
-    data: resultados.every((r) => r.data) ? resultados.map((r) => r.data!) : undefined,
-    isLoading: resultados.some((r) => r.isLoading),
-    error: resultados.find((r) => r.error)?.error ?? null,
-    refetch: () => Promise.all(resultados.map((r) => r.refetch())),
-  };
+export function useMisCalificaciones() {
+  const { api } = useApi();
+  const u = useUsuario();
+  return useQuery({ queryKey: qk.califsEstudiante(u.id), queryFn: () => api.calificaciones.delEstudiante(u.id) });
 }
 
-/**
- * Notas del estudiante en sesión, desde el backend:
- * matriz (GET /mis-notas) + notas por actividad de cada curso + entregas propias.
- * Los cortes y la definitiva parcial son los del backend; no se recalculan aquí.
- */
+/** Resumen ponderado de todos los cursos del estudiante en sesión. */
 export function useMisNotas() {
-  const { api, hoy, aprobatoria } = useApi();
-  const u = useUsuario();
-  const matriz = useQuery({ queryKey: qk.matriz, queryFn: () => api.estudiante.matriz() });
-  const entregas = useQuery({ queryKey: qk.misEntregas, queryFn: () => api.estudiante.misEntregas() });
-  const notas = useQueries({
-    queries: (matriz.data?.cursos ?? []).map((c) => ({ queryKey: qk.notasCurso(c.cursoId), queryFn: () => api.estudiante.notasCurso(c.cursoId) })),
-    combine: combinar,
-  });
+  const { hoy, aprobatoria } = useApi();
+  const cursos = useCursos();
+  const acts = useActividades();
+  const califs = useMisCalificaciones();
+  const publicaciones = usePublicaciones();
 
   const data = useMemo<NotasCurso[] | undefined>(() => {
-    if (!matriz.data || !entregas.data || !notas.data) return undefined;
+    if (!cursos.data || !acts.data || !califs.data || !publicaciones.data) return undefined;
     const h = hoy();
-    return matriz.data.cursos.map((cm, i) => {
-      const curso = cursoDesdeMatriz(cm, i);
-      const resumen = resumenDesdeMatriz(cm, aprobatoria);
-      const actividades = (notas.data!.find((n) => n.cursoId === cm.cursoId)?.actividades ?? []).map((n): ActividadEstudiante => {
-        const actividad = actividadDesdeNota(cm.cursoId, n);
-        const entrega = entregas.data.find((e) => e.actividadId === n.actividadId);
-        const calificacion = calificacionDesde(n, entrega, u.id);
-        return { actividad, calificacion, entrega, estado: estadoEstudiante(actividad, calificacion, h) };
+    return cursos.data.map((curso) => {
+      const propias = acts.data.filter((a) => a.cursoId === curso.id);
+      const avance = resumenCurso(curso, propias, califs.data, aprobatoria);
+      const cortes = avance.cortes.map(k => {
+        const pub = publicaciones.data.find(p => p.cursoId === curso.id && p.corte === k.corte);
+        return { ...k, nota: pub?.nota ?? null, aporte: pub ? pub.nota * k.peso / 100 : 0 };
+      }) as typeof avance.cortes;
+      const acumulado = cortes.reduce((n, k) => n + k.aporte, 0);
+      const resumen = { ...avance, cortes, acumulado, necesidad: calcularNecesidad(acumulado, cortes.filter(k => k.nota !== null).reduce((n, k) => n + k.peso, 0), aprobatoria) };
+      const parcial = cortes.some(k => k.nota === null);
+      const actividades = propias.map((actividad) => {
+        const calificacion = califs.data.find((c) => c.actividadId === actividad.id);
+        return { actividad, calificacion, estado: estadoEstudiante(actividad, calificacion, h) };
       });
-      return { curso, resumen, mensaje: describirNecesidad(resumen.necesidad, aprobatoria), actividades, entregas: actividades.filter((a) => a.calificacion?.entregado).length };
+      return { curso, resumen, mensaje: parcial ? 'Definitiva parcial · faltan cortes por publicar.' : 'Definitiva · tres cortes publicados.', actividades, entregas: actividades.filter((a) => a.calificacion?.entregado).length };
     });
-  }, [matriz.data, entregas.data, notas.data, hoy, aprobatoria, u.id]);
+  }, [cursos.data, acts.data, califs.data, publicaciones.data, hoy, aprobatoria]);
 
-  const creditos = data?.map((n) => n.curso.creditos).filter((c): c is number => c != null) ?? [];
   return {
     data,
-    /** null mientras el backend no exponga los créditos del curso. */
-    totalCreditos: creditos.length ? creditos.reduce((a, c) => a + c, 0) : null,
-    isLoading: matriz.isLoading || entregas.isLoading || notas.isLoading,
-    error: matriz.error ?? entregas.error ?? notas.error,
-    refetch: () => Promise.all([matriz.refetch(), entregas.refetch(), notas.refetch()]),
+    totalCreditos: cursos.data?.reduce((a, c) => a + c.creditos, 0) ?? 0,
+    isLoading: cursos.isLoading || acts.isLoading || califs.isLoading || publicaciones.isLoading,
+    error: cursos.error ?? acts.error ?? califs.error ?? publicaciones.error,
+    refetch: () => Promise.all([cursos.refetch(), acts.refetch(), califs.refetch(), publicaciones.refetch()]),
   };
 }
 
@@ -88,8 +81,8 @@ export function useProximasEntregas(limite = 4) {
     const h = hoy();
     return q.data
       .flatMap((n) => n.actividades.map((a) => ({ ...a, curso: n.curso })))
-      .filter((a) => a.actividad.vence >= h)
-      .sort((a, b) => a.actividad.vence.localeCompare(b.actividad.vence))
+      .filter((a) => a.actividad.requiereEntrega && !!a.actividad.vence && Date.parse(a.actividad.vence) >= Date.parse(h) && a.estado === 'pendiente')
+      .sort((a, b) => Date.parse(a.actividad.vence) - Date.parse(b.actividad.vence))
       .slice(0, limite);
   }, [q.data, hoy, limite]);
   return { ...q, data };

@@ -52,6 +52,15 @@ public sealed class PlazoEntregaTests
     }
 
     [Fact]
+    public void Sin_fecha_limite_la_actividad_no_vence()
+    {
+        var plazo = new PlazoEntrega(null);
+
+        Assert.True(plazo.EstaVigente(DateTimeOffset.MaxValue));
+        PoliticaSubida.Verificar(requiereEntrega: true, plazo, Limite.AddYears(10));
+    }
+
+    [Fact]
     public void Actividad_con_entrega_en_el_limite_se_acepta()
         => PoliticaSubida.Verificar(requiereEntrega: true, new PlazoEntrega(Limite), Limite);
 }

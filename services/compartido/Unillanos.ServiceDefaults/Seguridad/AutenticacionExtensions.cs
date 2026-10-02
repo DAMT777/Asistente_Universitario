@@ -53,7 +53,9 @@ public static class AutenticacionExtensions
 
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
-            .AddPolicy(Politicas.SoloEstudiante, p => p.RequireAuthenticatedUser().RequireRole(Roles.Estudiante));
+            .AddPolicy(Politicas.SoloEstudiante, p => p.RequireAuthenticatedUser().RequireRole(Roles.Estudiante))
+            .AddPolicy(Politicas.SoloProfesor, p => p.RequireAuthenticatedUser().RequireRole(Roles.Profesor))
+            .AddPolicy(Politicas.EstudianteOProfesor, p => p.RequireAuthenticatedUser().RequireRole(Roles.Estudiante, Roles.Profesor));
 
         return services;
     }

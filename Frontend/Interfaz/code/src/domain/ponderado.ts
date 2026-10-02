@@ -5,7 +5,7 @@ const CORTES: Corte[] = [1, 2, 3];
 
 /**
  * Motor de ponderado.
- * - Nota del corte: promedio ponderado de las notas PUBLICADAS del corte.
+ * - Nota del corte: suma de aportes de las notas PUBLICADAS, sin normalizar.
  * - Aporte del corte: Σ(nota × pesoActividad) / 100 × pesoCorte / 100.
  * - Acumulado: suma de aportes (escala 0–5, como la "definitiva" parcial del SIAU).
  */
@@ -31,7 +31,7 @@ export function resumenCurso(
     return {
       corte: k,
       peso: pc,
-      nota: sumaPesos ? sumaNotas / sumaPesos : null,
+      nota: sumaPesos ? sumaNotas / 100 : null,
       aporte: ((sumaNotas / 100) * pc) / 100,
       evaluado: (sumaPesos * pc) / 100,
     };

@@ -18,19 +18,19 @@ export const ESTUDIANTES: Usuario[] = [
 ];
 
 export const ACTIVIDADES: Actividad[] = [
-  { id: 's1', cursoId: 'sim', corte: 1, titulo: 'Taller 1 · Método Montecarlo', peso: 40, vence: '2026-08-28' },
-  { id: 's2', cursoId: 'sim', corte: 1, titulo: 'Quiz 1 · Generadores aleatorios', peso: 60, vence: '2026-09-05' },
-  { id: 's3', cursoId: 'sim', corte: 2, titulo: 'Taller 2 · Teoría de colas', peso: 50, vence: '2026-09-26' },
-  { id: 's4', cursoId: 'sim', corte: 2, titulo: 'Avance de proyecto', peso: 50, vence: '2026-10-10' },
-  { id: 's5', cursoId: 'sim', corte: 3, titulo: 'Proyecto final', peso: 100, vence: '2026-11-20' },
-  { id: 'a1', cursoId: 'arq', corte: 1, titulo: 'Ensayo · Marco TOGAF', peso: 100, vence: '2026-09-04' },
-  { id: 'a2', cursoId: 'arq', corte: 2, titulo: 'Caso de estudio · ArchiMate', peso: 60, vence: '2026-09-29' },
-  { id: 'a3', cursoId: 'arq', corte: 2, titulo: 'Exposición grupal', peso: 40, vence: '2026-10-15' },
-  { id: 'a4', cursoId: 'arq', corte: 3, titulo: 'Examen final', peso: 100, vence: '2026-11-25' },
-  { id: 't1', cursoId: 'eti', corte: 1, titulo: 'Reflexión escrita', peso: 50, vence: '2026-08-30' },
-  { id: 't2', cursoId: 'eti', corte: 1, titulo: 'Foro · Dilemas profesionales', peso: 50, vence: '2026-09-08' },
-  { id: 't3', cursoId: 'eti', corte: 2, titulo: 'Debate en clase', peso: 100, vence: '2026-10-08' },
-  { id: 't4', cursoId: 'eti', corte: 3, titulo: 'Ensayo final', peso: 100, vence: '2026-11-28' },
+  { id: 's1', cursoId: 'sim', corte: 1, titulo: 'Taller 1 · Método Montecarlo', peso: 40, vence: '2026-08-28T23:59:00-05:00', requiereEntrega: true },
+  { id: 's2', cursoId: 'sim', corte: 1, titulo: 'Quiz 1 · Generadores aleatorios', peso: 60, vence: '2026-09-05T23:59:00-05:00', requiereEntrega: false },
+  { id: 's3', cursoId: 'sim', corte: 2, titulo: 'Taller 2 · Teoría de colas', peso: 50, vence: '2026-09-26T23:59:00-05:00', requiereEntrega: true },
+  { id: 's4', cursoId: 'sim', corte: 2, titulo: 'Avance de proyecto', peso: 50, vence: '2026-10-10T23:59:00-05:00', requiereEntrega: true },
+  { id: 's5', cursoId: 'sim', corte: 3, titulo: 'Proyecto final', peso: 100, vence: '2026-11-20T23:59:00-05:00', requiereEntrega: true },
+  { id: 'a1', cursoId: 'arq', corte: 1, titulo: 'Ensayo · Marco TOGAF', peso: 100, vence: '2026-09-04T23:59:00-05:00', requiereEntrega: true },
+  { id: 'a2', cursoId: 'arq', corte: 2, titulo: 'Caso de estudio · ArchiMate', peso: 60, vence: '2026-09-29T23:59:00-05:00', requiereEntrega: true },
+  { id: 'a3', cursoId: 'arq', corte: 2, titulo: 'Exposición grupal', peso: 40, vence: '2026-10-15T23:59:00-05:00', requiereEntrega: false },
+  { id: 'a4', cursoId: 'arq', corte: 3, titulo: 'Examen final', peso: 100, vence: '2026-11-25T23:59:00-05:00', requiereEntrega: false },
+  { id: 't1', cursoId: 'eti', corte: 1, titulo: 'Reflexión escrita', peso: 50, vence: '2026-08-30T23:59:00-05:00', requiereEntrega: true },
+  { id: 't2', cursoId: 'eti', corte: 1, titulo: 'Foro · Dilemas profesionales', peso: 50, vence: '2026-09-08T23:59:00-05:00', requiereEntrega: true },
+  { id: 't3', cursoId: 'eti', corte: 2, titulo: 'Debate en clase', peso: 100, vence: '2026-10-08T23:59:00-05:00', requiereEntrega: false },
+  { id: 't4', cursoId: 'eti', corte: 3, titulo: 'Ensayo final', peso: 100, vence: '2026-11-28T23:59:00-05:00', requiereEntrega: true },
 ];
 
 export function calificacionesIniciales(): Calificacion[] {
@@ -44,16 +44,16 @@ export function calificacionesIniciales(): Calificacion[] {
   };
   ESTUDIANTES.forEach((e, i) =>
     ['s1', 's2', 'a1', 't1', 't2'].forEach((a, j) =>
-      out.push({ actividadId: a, estudianteId: e.id, entregado: '2026-08-27', archivo: `${a}_${e.codigo}.pdf`, nota: base[i][j], estado: 'publicada', retro: i === 0 ? retroDiego[a] ?? '' : '' }),
+      out.push({ actividadId: a, estudianteId: e.id, entregado: '2026-08-27T15:00:00Z', archivo: `${a}_${e.codigo}.pdf`, nota: base[i][j], estado: 'publicada', retro: i === 0 ? retroDiego[a] ?? '' : '' }),
     ),
   );
   const ent = (a: string, e: string, extra: Partial<Calificacion> = {}) => {
     const cod = ESTUDIANTES.find((x) => x.id === e)!.codigo;
-    out.push({ actividadId: a, estudianteId: e, entregado: '2026-09-24', archivo: `${a}_${cod}.pdf`, nota: null, estado: null, retro: '', ...extra });
+    out.push({ actividadId: a, estudianteId: e, entregado: '2026-09-24T15:00:00Z', archivo: `${a}_${cod}.pdf`, nota: null, estado: null, retro: '', ...extra });
   };
   ent('s3', 'e1'); ent('s3', 'e2', { nota: 4.2, estado: 'borrador' }); ent('s3', 'e3'); ent('s3', 'e4', { nota: 4.7, estado: 'borrador' }); ent('s3', 'e6');
   ent('a2', 'e1', { nota: 3.9, estado: 'publicada', retro: 'El modelo de capas está completo. Mejora la vista de motivación.' });
   ent('a2', 'e2', { nota: 4.3, estado: 'publicada' }); ent('a2', 'e3'); ent('a2', 'e4', { nota: 4.5, estado: 'publicada' }); ent('a2', 'e5');
   ent('s4', 'e4');
-  return out;
+  return out.map(c => ACTIVIDADES.find(a => a.id === c.actividadId)?.requiereEntrega ? c : { ...c, entregado: null, archivo: null });
 }
