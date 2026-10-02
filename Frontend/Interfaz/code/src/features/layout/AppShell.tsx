@@ -40,7 +40,7 @@ export function AppShell() {
       <header style={{ position: 'relative', height: size.header, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: wide ? '0 20px' : '0 12px', borderBottom: `1px solid ${colors.linea}`, background: colors.barra, backdropFilter: web.blur, WebkitBackdropFilter: web.blur, boxShadow: web.sombraSuave, zIndex: 2 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <img src="/logo-unillanos.png" alt="Universidad de los Llanos" width={40} height={38} style={{ width: wide ? 40 : 34, height: 'auto', flex: 'none' }} />
-          <span style={{ fontSize: wide ? 15 : 12, fontWeight: 600, letterSpacing: wide ? '0.1em' : '0.04em' }}>AULA <span style={{ color: colors.marca, fontWeight: 700 }}>UNILLANOS</span></span>
+          <span style={{ fontSize: wide ? 15 : 12, fontWeight: 600, letterSpacing: wide ? '0.1em' : '0.04em' }}>SIRIUS <span style={{ color: colors.marca, fontWeight: 700 }}>UNILLANOS</span></span>
           {wide && <><span style={{ width: 1, height: 24, background: colors.lineaFuerte }} /><span style={{ fontSize: 14, color: colors.textoTenue }}>Actividades y notas</span></>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: wide ? 12 : 8 }}>
