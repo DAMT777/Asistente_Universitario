@@ -1,6 +1,16 @@
 import { z } from 'zod';
-import { actividadSchema, calificacionSchema, cursoSchema, sesionSchema, usuarioSchema } from '@/schemas';
+import { actividadSchema, calificacionSchema, cursoSchema, usuarioSchema } from '@/schemas';
+import type { Rol } from '@/types';
 import { ApiError, type ApiClient } from './contratos';
+
+/** Respuesta real del Servicio de Usuarios (POST /api/auth/login). */
+const authRespuestaSchema = z.object({
+  accessToken: z.string(),
+  userId: z.string(),
+  username: z.string(),
+  fullName: z.string(),
+  roles: z.array(z.string()),
+});
 
 export interface HttpConfig {
   baseUrl: string;
@@ -12,7 +22,7 @@ export interface HttpConfig {
 export function createHttpApi(cfg: HttpConfig): ApiClient {
   const f = cfg.fetchImpl ?? fetch;
 
-  async function req<T>(method: string, path: string, schema: z.ZodType<T>, body?: unknown): Promise<T> {
+  async function req<T>(method: string, path: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, body?: unknown): Promise<T> {
     const token = await cfg.getToken();
     const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     const res = await f(cfg.baseUrl + path, {
@@ -25,7 +35,7 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
       body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
     });
     if (!res.ok) {
-      const msg = await res.json().then((j: { mensaje?: string }) => j.mensaje).catch(() => undefined);
+      const msg = await res.json().then((j: { mensaje?: string; error?: string }) => j.mensaje ?? j.error).catch(() => undefined);
       throw new ApiError(res.status, msg ?? 'No se pudo completar la solicitud.');
     }
     if (res.status === 204) return schema.parse(undefined);
@@ -36,8 +46,20 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
 
   return {
     auth: {
-      login: (input) => req('POST', '/auth/login', sesionSchema, input),
-      logout: () => req('POST', '/auth/logout', vacio),
+      // El backend usa { usernameOrEmail, password } y devuelve { accessToken, ... }.
+      // Aquí se traduce al contrato { token, usuario } que usa el resto del frontend.
+      login: async ({ usuario, contrasena, rol }) => {
+        const r = await req('POST', '/auth/login', authRespuestaSchema, { usernameOrEmail: usuario, password: contrasena })
+          .catch((e) => {
+            if (e instanceof ApiError && e.status === 401) throw new ApiError(401, 'Usuario o contraseña incorrectos.');
+            throw e;
+          });
+        const rolReal: Rol = r.roles.includes('PROFESOR') ? 'docente' : 'estudiante';
+        if (rolReal !== rol) throw new ApiError(403, `Esta cuenta no es de ${rol}.`);
+        return { token: r.accessToken, usuario: { id: r.userId, nombre: r.fullName, codigo: r.username, rol: rolReal } };
+      },
+      // Con JWT no hay endpoint de logout: basta con descartar el token en el cliente.
+      logout: async () => undefined,
     },
     cursos: {
       listar: () => req('GET', '/cursos', z.array(cursoSchema)),

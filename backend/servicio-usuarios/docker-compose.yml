@@ -1,0 +1,38 @@
+services:
+  db-usuarios:
+    image: postgres:16
+    container_name: db-usuarios
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-usuarios}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ClaveDev123}
+    volumes:
+      - usuarios_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"   # host:contenedor -> te conectas desde tu PC por el 5433
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-usuarios:
+    build: .
+    container_name: api-usuarios
+    restart: unless-stopped
+    depends_on:
+      db-usuarios:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development   # habilita Swagger
+      # Dentro de la red de Docker el host es el NOMBRE del servicio y el puerto es el interno (5432)
+      ConnectionStrings__Default: "Host=db-usuarios;Port=5432;Database=${POSTGRES_DB:-usuarios};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-ClaveDev123}"
+      Jwt__Key: ${JWT_KEY:-clave-solo-para-desarrollo-de-32-o-mas-caracteres}
+      Jwt__Issuer: MiniIdentityApi
+      Jwt__Audience: MiniIdentityApiUsers
+    ports:
+      - "5001:8080"
+
+volumes:
+  usuarios_data:

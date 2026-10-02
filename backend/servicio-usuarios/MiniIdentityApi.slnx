@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/MiniIdentityApi.Api/MiniIdentityApi.Api.csproj" />
+  <Project Path="src/MiniIdentityApi.Application/MiniIdentityApi.Application.csproj" />
+  <Project Path="src/MiniIdentityApi.Domain/MiniIdentityApi.Domain.csproj" />
+  <Project Path="src/MiniIdentityApi.Infrastructure/MiniIdentityApi.Infrastructure.csproj" />
+  <Project Path="src/MiniIdentityApi.Tests/MiniIdentityApi.Tests.csproj" />
+</Solution>
