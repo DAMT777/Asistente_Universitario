@@ -1,7 +1,7 @@
 import type { Calificacion, PublicacionCorte, Sesion, Usuario } from '@/types';
 import { resumenCurso, redondear1, validarPesos, puedeEntregar } from '@/domain';
 import { seleccionEntregaSchema, actividadInputSchema } from '@/schemas';
-import { ApiError, type ApiClient } from '../contratos';
+import { ApiError, type AccionPendiente, type ApiClient } from '../contratos';
 import { ACTIVIDADES, CURSOS, DOCENTE, ESTUDIANTES, calificacionesIniciales } from './seed';
 
 export interface MockConfig {
@@ -24,6 +24,56 @@ export function createMockApi(cfg: MockConfig): ApiClient {
   const buscar = (a: string, e: string) => db.califs.find((c) => c.actividadId === a && c.estudianteId === e);
   const exigirDocente = () => {
     if (usuario?.rol !== 'docente') throw new ApiError(403, 'Solo el docente puede hacer esto.');
+  };
+
+  /** Acciones pendientes del asistente de demostración (vencen a los 5 minutos, como en el servicio). */
+  const acciones = new Map<string, AccionPendiente & { creadaPor: string; actividadId: string; estudianteId: string; nota: number; retro: string; usada: boolean; vence: number }>();
+  const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const fmt = (n: number) => n.toFixed(1);
+
+  /**
+   * Asistente de demostración sin modelo de lenguaje: reconoce frases sencillas.
+   * Respeta las mismas reglas que el servicio: el estudiante solo lee lo publicado y el docente solo propone.
+   */
+  function responderDemo(texto: string): { respuesta: string; accion: AccionPendiente | null } {
+    if (!usuario) throw new ApiError(401, 'Inicia sesión.', 'NO_AUTENTICADO');
+    const t = sinTildes(texto);
+    if (usuario.rol === 'estudiante') {
+      if (/(pon|cambia|sube|modifica).*\d/.test(t)) return { respuesta: 'No puedo modificar calificaciones. Puedo contarte tus notas publicadas y tus entregas.', accion: null };
+      const mias = db.califs.filter(c => c.estudianteId === usuario!.id);
+      if (/entreg/.test(t)) {
+        const hechas = mias.filter(c => c.entregado).map(c => `- **${db.actividades.find(a => a.id === c.actividadId)?.titulo}**: ${c.archivo}`);
+        return { respuesta: hechas.length ? `Estas son tus entregas:\n${hechas.join('\n')}` : 'No tienes entregas registradas.', accion: null };
+      }
+      const lineas = db.actividades.filter(a => mias.some(c => c.actividadId === a.id)).map(a => {
+        const c = mias.find(x => x.actividadId === a.id)!;
+        return `- **${a.titulo}**: ${c.estado === 'publicada' && c.nota !== null ? fmt(c.nota) : 'sin calificar'}`;
+      });
+      return { respuesta: `Tus notas publicadas (demostración):\n${lineas.join('\n')}`, accion: null };
+    }
+    const valor = /(\d(?:[.,]\d)?)/.exec(t)?.[1];
+    const est = ESTUDIANTES.filter(e => sinTildes(e.nombre).split(' ').some(p => p.length > 2 && t.includes(p)));
+    const act = db.actividades.filter(a => sinTildes(a.titulo).split(/[ ·]+/).filter(p => p.length > 3 || /\d/.test(p)).every(p => t.includes(p)));
+    if (!valor || est.length === 0 || act.length === 0) {
+      return { respuesta: 'Puedo proponer una nota en borrador. Escríbela así: *Ponle 4.2 a Valentina en Avance de proyecto*.', accion: null };
+    }
+    if (est.length > 1) return { respuesta: `Hay varias coincidencias: ${est.map(e => e.nombre).join(', ')}. ¿A quién te refieres?`, accion: null };
+    const nota = Number(valor.replace(',', '.'));
+    if (!(nota >= 0 && nota <= 5)) return { respuesta: 'La nota debe estar entre 0.0 y 5.0.', accion: null };
+    const anterior = buscar(act[0].id, est[0].id)?.nota;
+    const id = `acc-${Date.now()}`;
+    const resumen = `Poner ${fmt(nota)} a ${est[0].nombre} en ${act[0].titulo}${anterior != null ? ` (antes ${fmt(anterior)})` : ''}. Queda en borrador.`;
+    const vence = Date.now() + 5 * 60_000;
+    const accion = { id, resumen, expiraEn: new Date(vence).toISOString() };
+    acciones.set(id, { ...accion, creadaPor: usuario.id, actividadId: act[0].id, estudianteId: est[0].id, nota, retro: '', usada: false, vence });
+    return { respuesta: `Te propongo poner **${fmt(nota)}** a **${est[0].nombre}** en **${act[0].titulo}**. Confírmala para guardarla.`, accion };
+  }
+  const accionPropia = (id: string) => {
+    const a = acciones.get(id);
+    if (!a || a.creadaPor !== usuario?.id) throw new ApiError(404, 'La acción no existe.', 'ACCION_NO_ENCONTRADA');
+    if (a.usada) throw new ApiError(409, 'La acción ya fue confirmada o cancelada.', 'ACCION_YA_USADA');
+    if (Date.now() >= a.vence) throw new ApiError(410, 'La acción expiró. Pide de nuevo la calificación.', 'ACCION_EXPIRADA');
+    return a;
   };
 
   // Datos semilla: primer corte publicado; los demás siguen pendientes.
@@ -173,6 +223,24 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         c.entregado = cfg.hoy();
         c.archivo = archivos.map(a => a.nombre).join(', ');
         return espera(c);
+      },
+    },
+    asistente: {
+      async enviar({ mensaje, conversacionId }) {
+        const { respuesta, accion } = responderDemo(mensaje);
+        return espera({ conversacionId: conversacionId ?? `conv-${Date.now()}`, respuesta, accionPendiente: accion });
+      },
+      async confirmar(id) {
+        const a = accionPropia(id);
+        a.usada = true;
+        let c = buscar(a.actividadId, a.estudianteId);
+        if (!c) { c = { actividadId: a.actividadId, estudianteId: a.estudianteId, entregado: null, archivo: null, nota: null, estado: null, retro: '' }; db.califs.push(c); }
+        Object.assign(c, { nota: a.nota, estado: 'borrador' } satisfies Partial<Calificacion>);
+        return espera({ valor: a.nota, estado: 'BORRADOR' });
+      },
+      async cancelar(id) {
+        accionPropia(id).usada = true;
+        return espera(undefined);
       },
     },
   };

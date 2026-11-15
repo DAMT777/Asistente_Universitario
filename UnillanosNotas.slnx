@@ -1,5 +1,16 @@
 <Solution>
   <Folder Name="/services/" />
+  <Folder Name="/services/asistente/" />
+  <Folder Name="/services/asistente/src/">
+    <Project Path="services/asistente/src/Asistente.Api/Asistente.Api.csproj" />
+    <Project Path="services/asistente/src/Asistente.Application/Asistente.Application.csproj" />
+    <Project Path="services/asistente/src/Asistente.Domain/Asistente.Domain.csproj" />
+    <Project Path="services/asistente/src/Asistente.Infrastructure/Asistente.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/asistente/tests/">
+    <Project Path="services/asistente/tests/Asistente.IntegrationTests/Asistente.IntegrationTests.csproj" />
+    <Project Path="services/asistente/tests/Asistente.UnitTests/Asistente.UnitTests.csproj" />
+  </Folder>
   <Folder Name="/services/compartido/">
     <Project Path="services/compartido/Unillanos.Pruebas.Compartidas/Unillanos.Pruebas.Compartidas.csproj" />
     <Project Path="services/compartido/Unillanos.ServiceDefaults/Unillanos.ServiceDefaults.csproj" />

@@ -1,0 +1,219 @@
+# Contrato del servicio asistente IA (fuente de verdad). Mismo estilo YAML mínimo que los demás contratos.
+openapi: 3.1.0
+info:
+  title: Servicio asistente IA
+  version: 1.0.0
+  description: "Asistente en lenguaje natural. Expuesto por el API Gateway en /asistente/**; el servicio escucha en 5004. Reenvía el JWT del usuario y solo usa rutas públicas del gateway."
+servers:
+  - url: http://localhost:5000
+    description: API Gateway (local)
+security:
+  - bearerAuth: []
+tags:
+  - name: Asistente
+  - name: Salud
+paths:
+  /asistente/mensajes:
+    post:
+      tags: [Asistente]
+      summary: Envía un mensaje al asistente.
+      description: "ESTUDIANTE: consultas de solo lectura de sus notas publicadas, matriz y entregas. PROFESOR: además puede pedir una calificación; el asistente solo crea una acción pendiente que debe confirmarse."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudMensaje"
+      responses:
+        "200":
+          description: Respuesta del asistente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaMensaje"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /asistente/acciones/{id}/confirmar:
+    post:
+      tags: [Asistente]
+      summary: Confirma una acción pendiente y ejecuta la escritura en Evaluaciones.
+      description: "Solo quien creó la acción, antes de que expire y una sola vez. Responde la calificación tal como la devuelve Evaluaciones (en BORRADOR). Los errores de Evaluaciones (403, 404, 409 CONFLICTO_CONCURRENCIA, 422) se devuelven con su código."
+      parameters:
+        - $ref: "#/components/parameters/AccionId"
+      responses:
+        "200":
+          description: Calificación guardada en borrador.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calificacion"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "410":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /asistente/acciones/{id}/cancelar:
+    post:
+      tags: [Asistente]
+      summary: Cancela una acción pendiente.
+      parameters:
+        - $ref: "#/components/parameters/AccionId"
+      responses:
+        "200":
+          description: Acción cancelada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccionCancelada"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "410":
+          $ref: "#/components/responses/Error"
+  /health/live:
+    get:
+      tags: [Salud]
+      security: []
+      responses:
+        "200":
+          description: El proceso responde.
+  /health/ready:
+    get:
+      tags: [Salud]
+      security: []
+      responses:
+        "200":
+          description: asistente_db responde.
+        "503":
+          description: asistente_db no responde.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    AccionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Error:
+      description: Error con el formato estándar.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    SolicitudMensaje:
+      type: object
+      additionalProperties: false
+      required: [mensaje]
+      properties:
+        conversacionId:
+          type: [string, "null"]
+          format: uuid
+        mensaje:
+          type: string
+          maxLength: 1000
+    RespuestaMensaje:
+      type: object
+      additionalProperties: false
+      required: [conversacionId, respuesta, accionPendiente]
+      properties:
+        conversacionId:
+          type: string
+          format: uuid
+        respuesta:
+          type: string
+        accionPendiente:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AccionPendiente"
+    AccionPendiente:
+      type: object
+      additionalProperties: false
+      required: [id, resumen, expiraEn]
+      properties:
+        id:
+          type: string
+          format: uuid
+        resumen:
+          type: string
+        expiraEn:
+          type: string
+          format: date-time
+    AccionCancelada:
+      type: object
+      additionalProperties: false
+      required: [id, estado]
+      properties:
+        id:
+          type: string
+          format: uuid
+        estado:
+          type: string
+          enum: [CANCELADA]
+    Calificacion:
+      type: object
+      description: "Respuesta de PUT /actividades/{actividadId}/calificaciones/{estudianteId} de Evaluaciones, sin cambios."
+      required: [id, actividadId, estudianteId, valor, estado]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actividadId:
+          type: string
+          format: uuid
+        estudianteId:
+          type: string
+          format: uuid
+        entregaId:
+          type: [string, "null"]
+          format: uuid
+        valor:
+          type: number
+        retroalimentacion:
+          type: [string, "null"]
+        estado:
+          type: string
+          enum: [BORRADOR]
+        version:
+          type: [string, "null"]
+    Error:
+      type: object
+      additionalProperties: false
+      required: [status, codigo, mensaje, traceId]
+      properties:
+        status:
+          type: integer
+        codigo:
+          type: string
+          description: "Código estable. Comunes: VALIDACION_FALLIDA, NO_AUTENTICADO, TOKEN_EXPIRADO, SIN_PERMISO, NO_ENCONTRADO, SERVICIO_NO_DISPONIBLE. Del asistente: ACCION_NO_ENCONTRADA (404), ACCION_EXPIRADA (410), ACCION_YA_USADA (409), LIMITE_MENSAJES (429), ASISTENTE_NO_DISPONIBLE (503). Reenviados de Evaluaciones: CONFLICTO_CONCURRENCIA (409), NOTA_FUERA_DE_RANGO (422), ACTIVIDAD_SIN_ENTREGA (422)."
+        mensaje:
+          type: string
+        traceId:
+          type: string

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useCallback, useState, type CSSProperties } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useSesion, useUsuario } from '@/hooks';
 import { iniciales } from '@/domain';
@@ -6,6 +6,12 @@ import { colors, font, size, space, web } from '@/theme/tokens';
 import { Icono, icono, conOnda } from '@/ui';
 import { useIsWide } from '@/ui/useIsWide';
 import { useVidrio } from '@/ui/tema';
+import { VentanaAsistente, type EstadoVentana } from '@/features/asistente/VentanaAsistente';
+
+const CLAVE_MENU = 'aula.menu';
+const CLAVE_CHAT = 'aula.chat';
+const leer = (clave: string, almacen: () => Storage) => { try { return almacen().getItem(clave); } catch { return null; } };
+const guardar = (clave: string, valor: string, almacen: () => Storage) => { try { almacen().setItem(clave, valor); } catch { /* sin almacenamiento */ } };
 
 export function AppShell() {
   const wide = useIsWide();
@@ -13,6 +19,12 @@ export function AppShell() {
   const { logout } = useSesion();
   const nav = useNavigate();
   const [vidrio, alternarVidrio] = useVidrio();
+  // Menú lateral desplegable: se recuerda entre visitas.
+  const [menuAbierto, setMenuAbierto] = useState(() => leer(CLAVE_MENU, () => localStorage) !== 'cerrado');
+  const alternarMenu = () => setMenuAbierto(a => { guardar(CLAVE_MENU, a ? 'cerrado' : 'abierto', () => localStorage); return !a; });
+  // Chat del asistente: abierto, minimizado (burbuja) o cerrado. Se recuerda durante la sesión de la pestaña.
+  const [chat, setChat] = useState<EstadoVentana>(() => (leer(CLAVE_CHAT, () => sessionStorage) as EstadoVentana | null) ?? 'cerrada');
+  const cambiarChat = useCallback((e: EstadoVentana) => { setChat(e); guardar(CLAVE_CHAT, e, () => sessionStorage); }, []);
   const base = u.rol === 'docente' ? '/d' : '/e';
   const items = [
     { to: base, end: true, label: 'Inicio', d: icono.inicio },
@@ -39,6 +51,11 @@ export function AppShell() {
 
       <header style={{ position: 'relative', height: size.header, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: wide ? '0 20px' : '0 12px', borderBottom: `1px solid ${colors.linea}`, background: colors.barra, backdropFilter: web.blur, WebkitBackdropFilter: web.blur, boxShadow: web.sombraSuave, zIndex: 2 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {wide && (
+            <button type="button" aria-label={menuAbierto ? 'Ocultar menú' : 'Mostrar menú'} aria-expanded={menuAbierto} aria-controls="au-menu-lateral" title={menuAbierto ? 'Ocultar menú' : 'Mostrar menú'} onPointerDown={conOnda()} className="au-onda-host au-boton--contorno" onClick={alternarMenu} style={botonIcono}>
+              <Icono d={icono.menu} tam={18} />
+            </button>
+          )}
           <img src="/logo-unillanos.png" alt="Universidad de los Llanos" width={40} height={38} style={{ width: wide ? 40 : 34, height: 'auto', flex: 'none' }} />
           <span style={{ fontSize: wide ? 15 : 12, fontWeight: 600, letterSpacing: wide ? '0.1em' : '0.04em' }}>SIRIUS <span style={{ color: colors.marca, fontWeight: 700 }}>UNILLANOS</span></span>
           {wide && <><span style={{ width: 1, height: 24, background: colors.lineaFuerte }} /><span style={{ fontSize: 14, color: colors.textoTenue }}>Actividades y notas</span></>}
@@ -51,6 +68,9 @@ export function AppShell() {
             </div>
           )}
           <div style={{ width: 38, height: 38, borderRadius: '50%', background: colors.marcaSuave, color: colors.marcaTexto, border: `1px solid ${colors.lineaMarca}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>{iniciales(u.nombre)}</div>
+          <button type="button" aria-label="Asistente" aria-pressed={chat === 'abierta'} title={chat === 'abierta' ? 'Cerrar el asistente' : 'Asistente: pregúntale por notas y cursos'} onPointerDown={conOnda()} className="au-onda-host au-boton--contorno au-boton-activo" onClick={() => cambiarChat(chat === 'abierta' ? 'cerrada' : 'abierta')} style={botonIcono}>
+            <Icono d={icono.asistente} tam={18} />
+          </button>
           <button type="button" aria-label="Modo vidrio" aria-pressed={vidrio} title={vidrio ? 'Quitar modo vidrio' : 'Modo vidrio: ver el campus de fondo'} onPointerDown={conOnda()} className="au-onda-host au-boton--contorno au-boton-vidrio" onClick={alternarVidrio} style={botonIcono}>
             <Icono d={icono.vidrio} tam={18} />
           </button>
@@ -62,9 +82,9 @@ export function AppShell() {
 
       <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex' }}>
         {wide && (
-          <aside aria-label="Navegación principal" style={{ width: size.sidebar, flex: 'none', display: 'flex', flexDirection: 'column', gap: 6, padding: '20px 14px', borderRight: `1px solid ${colors.linea}`, background: colors.barra, backdropFilter: web.blur, WebkitBackdropFilter: web.blur }}>
+          <aside id="au-menu-lateral" aria-label="Navegación principal" aria-hidden={!menuAbierto} data-cerrado={!menuAbierto} className="au-menu-lateral" style={{ width: size.sidebar, flex: 'none', display: 'flex', flexDirection: 'column', gap: 6, padding: '20px 14px', borderRight: `1px solid ${colors.linea}`, background: colors.barra, backdropFilter: web.blur, WebkitBackdropFilter: web.blur }}>
             {items.map((i) => (
-              <NavLink key={i.to} to={i.to} end={i.end} className="au-nav-link" style={({ isActive }) => navStyle(isActive, false)}><Icono d={i.d} />{i.label}</NavLink>
+              <NavLink key={i.to} to={i.to} end={i.end} tabIndex={menuAbierto ? undefined : -1} className="au-nav-link" style={({ isActive }) => navStyle(isActive, false)}><Icono d={i.d} />{i.label}</NavLink>
             ))}
             <div style={{ marginTop: 'auto', borderRadius: 14, overflow: 'hidden', border: `1px solid ${colors.linea}`, background: colors.blanco, boxShadow: web.sombraSuave }}>
               <div style={{ height: 96, backgroundImage: 'url(/campus.webp)', backgroundSize: 'cover', backgroundPosition: '60% 40%' }} />
@@ -89,6 +109,8 @@ export function AppShell() {
           ))}
         </nav>
       )}
+
+      <VentanaAsistente estado={chat} onCambiar={cambiarChat} />
     </div>
   );
 }

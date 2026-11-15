@@ -197,6 +197,11 @@ export const icono = {
   cerrar: 'M6 6l12 12M18 6 6 18',
   vidrio: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 15l4.5-4.5a1.5 1.5 0 0 1 2 0L16 16M14 14l1.5-1.5a1.5 1.5 0 0 1 2 0L20 15M15 8.5h.01',
   desplegar: 'm6 9 6 6 6-6',
+  asistente: 'M12 3.5c4.7 0 8.5 3.3 8.5 7.4s-3.8 7.4-8.5 7.4c-.9 0-1.8-.1-2.6-.3L5 20l.9-3.6c-1.5-1.3-2.4-3.1-2.4-5.1 0-4.1 3.8-7.4 8.5-7.4zM8.5 11h.01M12 11h.01M15.5 11h.01',
+  enviar: 'M4.5 12 3 4.5l18 7.5-18 7.5zM4.5 12H12',
+  minimizar: 'M6 12h12',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  reiniciar: 'M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5',
 } as const;
 
 export function Icono({ d, tam = 20 }: { d: string; tam?: number }) {

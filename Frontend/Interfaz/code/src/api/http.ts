@@ -23,6 +23,7 @@ const calificacionDto = z.object({ actividadId: z.string(), estudianteId: z.stri
 const entregaDto = z.object({ id: z.string(), actividadId: z.string(), estudianteId: z.string(), fechaEnvio: z.string(), estado: z.enum(['ENVIADA', 'ANULADA']), archivos: z.array(z.object({ id: z.string(), nombreArchivo: z.string(), tamano: z.number() })), tamanoTotal: z.number() });
 // contracts/evaluaciones.yaml (CU-15): solo las PUBLICADAS traen nota; un borrador llega como SIN_CALIFICAR.
 const notasActividadesDto = z.object({ cursoId: z.string(), actividades: z.array(z.object({ actividadId: z.string(), estado: z.enum(['PUBLICADA', 'SIN_CALIFICAR']), nota: z.number().nullable(), retroalimentacion: z.string().nullable() })) });
+const respuestaAsistenteDto = z.object({ conversacionId: z.string(), respuesta: z.string(), accionPendiente: z.object({ id: z.string(), resumen: z.string(), expiraEn: z.string() }).nullable() });
 const publicacionDto = z.object({ estudianteId: z.string(), corte: z.union([z.literal(1),z.literal(2),z.literal(3)]), nota: z.number(), fechaPublicacion: z.string().optional() });
 
 export function createHttpApi(cfg: HttpConfig): ApiClient {
@@ -34,8 +35,8 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
     const res = await f(cfg.baseUrl.replace(/\/$/, '') + path, { method, headers: { Accept: 'application/json', ...(formulario || body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : formulario ? body : JSON.stringify(body) });
     if (!res.ok) {
       if (res.status === 401 && path !== '/auth/login') cfg.onSesionVencida?.();
-      const msg = await res.json().then((j: { mensaje?: string }) => j.mensaje).catch(() => undefined);
-      throw new ApiError(res.status, msg ?? 'No se pudo completar la solicitud.');
+      const cuerpo = await res.json().catch(() => undefined) as { mensaje?: string; codigo?: string } | undefined;
+      throw new ApiError(res.status, cuerpo?.mensaje ?? 'No se pudo completar la solicitud.', cuerpo?.codigo);
     }
     if (res.status === 204) return schema.parse(undefined);
     try { return schema.parse(await res.json()); }
@@ -150,6 +151,11 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
         return combinar(undefined,e,id,e.estudianteId);
       },
       descargarArchivo: archivoUrl,
+    },
+    asistente: {
+      enviar: input => req('POST', '/asistente/mensajes', respuestaAsistenteDto, { mensaje: input.mensaje, ...(input.conversacionId ? { conversacionId: input.conversacionId } : {}) }),
+      confirmar: id => req('POST', `/asistente/acciones/${encodeURIComponent(id)}/confirmar`, z.object({ valor: z.number(), estado: z.string() })),
+      async cancelar(id) { await req('POST', `/asistente/acciones/${encodeURIComponent(id)}/cancelar`, vacio); },
     },
   };
 }

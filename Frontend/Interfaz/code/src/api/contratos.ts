@@ -39,10 +39,31 @@ export interface ApiClient {
     /** URL local (object URL) de un archivo de la entrega, para descargarlo con su nombre. */
     descargarArchivo(entregaId: string, archivoId: string): Promise<string>;
   };
+  /** Asistente IA (contracts/asistente.yaml). Nunca escribe sin confirmar: proponer solo crea una acción pendiente. */
+  asistente: {
+    enviar(input: { mensaje: string; conversacionId?: string }): Promise<RespuestaAsistente>;
+    /** Ejecuta la acción pendiente (la nota queda en borrador). Devuelve la nota guardada. */
+    confirmar(accionId: string): Promise<{ valor: number; estado: string }>;
+    cancelar(accionId: string): Promise<void>;
+  };
+}
+
+export interface AccionPendiente {
+  id: string;
+  resumen: string;
+  /** ISO 8601. Después de esta hora la acción ya no se puede confirmar. */
+  expiraEn: string;
+}
+
+export interface RespuestaAsistente {
+  conversacionId: string;
+  respuesta: string;
+  accionPendiente: AccionPendiente | null;
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  /** Código estable del contrato (p. ej. ACCION_EXPIRADA), si el servicio lo envió. */
+  constructor(public status: number, message: string, public codigo?: string) {
     super(message);
   }
 }

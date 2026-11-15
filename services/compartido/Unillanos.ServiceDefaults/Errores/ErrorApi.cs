@@ -4,4 +4,5 @@ namespace Unillanos.ServiceDefaults.Errores;
 public sealed record ErrorApi(int Status, string Codigo, string Mensaje, string TraceId);
 
 /// <summary>Traducción de una excepción a un código del contrato.</summary>
-public sealed record ErrorDescrito(string Codigo, string Mensaje);
+/// <param name="Status">Estado HTTP explícito para códigos que no están en <see cref="CodigosError"/>; null usa la tabla común.</param>
+public sealed record ErrorDescrito(string Codigo, string Mensaje, int? Status = null);

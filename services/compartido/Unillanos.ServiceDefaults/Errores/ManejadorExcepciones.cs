@@ -28,7 +28,7 @@ public sealed class ManejadorExcepciones(
             logger.LogInformation("Solicitud rechazada con {Codigo}: {Mensaje}", error.Codigo, error.Mensaje);
         }
 
-        await EscritorErrores.EscribirAsync(contexto, error.Codigo, error.Mensaje);
+        await EscritorErrores.EscribirAsync(contexto, error.Codigo, error.Mensaje, error.Status);
         return true;
     }
 

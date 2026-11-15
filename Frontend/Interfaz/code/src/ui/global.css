@@ -484,3 +484,42 @@ html[data-au-ola="sube"]::view-transition-group(au-ola-cresta) { animation: au-c
 
 @keyframes au-ola-baja { from { -webkit-mask-position: 0 100%; mask-position: 0 100%; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
 @keyframes au-ola-sube { from { -webkit-mask-position: 0 0; mask-position: 0 0; } to { -webkit-mask-position: 0 100%; mask-position: 0 100%; } }
+
+/* ───────── Chat flotante del asistente (estilo ventana de mensajería) ───────── */
+@keyframes au-chat-in { from { opacity: 0; transform: translateY(24px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes au-burbuja-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+.au-chat {
+  position: fixed; right: 88px; bottom: 16px; z-index: 75;
+  width: 360px; height: min(540px, calc(100dvh - 96px));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--au-c-superficieFuerte); color: var(--au-c-texto);
+  border: 1px solid var(--au-c-linea); border-radius: 18px;
+  box-shadow: var(--au-sombra-elevada);
+  transform-origin: bottom right; animation: au-chat-in 340ms var(--au-curva) both;
+}
+.au-chat::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, #B9051A, #E3061D 50%, #FF4A5C); z-index: 1; }
+.au-chat-accion { transition: background-color var(--au-rapido) var(--au-curva); }
+.au-chat-accion:hover:not(:disabled), .au-chat-accion:focus-visible { background-color: var(--au-c-marcaSuave) !important; }
+.au-chat-accion:disabled { opacity: .4; }
+.au-chat-campo { transition: border-color var(--au-rapido) var(--au-curva), box-shadow var(--au-rapido) var(--au-curva); }
+.au-chat-campo:focus { outline: none; border-color: var(--au-c-lineaMarca) !important; box-shadow: 0 0 0 3px var(--au-c-marcaSuave); }
+.au-chat-enviar { transition: transform var(--au-rapido) var(--au-curva), background-color var(--au-rapido) var(--au-curva); }
+.au-chat-enviar:hover:not(:disabled) { background-color: var(--au-c-marcaSuave) !important; transform: translateX(2px); }
+.au-chat-burbuja {
+  position: fixed; right: 88px; bottom: 24px; z-index: 75;
+  width: 52px; height: 52px; border-radius: 50%; border: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #E3061D, #B9051A); color: #FFFFFF;
+  box-shadow: var(--au-sombra-elevada); animation: au-burbuja-in 300ms var(--au-curva) both;
+}
+.au-chat-punto { position: absolute; top: 2px; right: 2px; width: 13px; height: 13px; border-radius: 50%; background: #0B7A58; border: 2px solid #FFFFFF; }
+.au-boton-activo[aria-pressed="true"], .au-boton-activo[aria-pressed="true"]:hover:not(:disabled) { background-color: var(--au-c-marca) !important; border-color: var(--au-c-marca) !important; color: var(--au-c-sobreMarca) !important; }
+@media (max-width: 859px) {
+  .au-chat { left: 8px; right: 8px; width: auto; bottom: calc(76px + env(safe-area-inset-bottom)); height: min(560px, calc(100dvh - 156px)); }
+  .au-chat-burbuja { right: 14px; bottom: calc(148px + env(safe-area-inset-bottom)); }
+}
+
+/* ───────── Menú lateral desplegable ───────── */
+.au-menu-lateral { overflow: hidden; transition: width var(--au-base) var(--au-curva), padding var(--au-base) var(--au-curva), opacity var(--au-base) var(--au-curva), border-color var(--au-base) var(--au-curva); }
+.au-menu-lateral[data-cerrado="true"] { width: 0 !important; box-shadow: none !important; padding-left: 0 !important; padding-right: 0 !important; opacity: 0; border-right-color: transparent !important; pointer-events: none; }
+.au-menu-lateral .au-nav-link { white-space: nowrap; }

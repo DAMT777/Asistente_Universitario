@@ -6,3 +6,4 @@ export { useEntrega } from './useEntrega';
 export { useCalificaciones, type FilaCalificacion } from './useCalificaciones';
 export { usePonderado } from './usePonderado';
 export { usePendientesDocente, useCrearActividad } from './useDocente';
+export { useAsistente, mensajeDeError, type MensajeChat, type EstadoAccion } from './useAsistente';
