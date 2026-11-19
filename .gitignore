@@ -28,3 +28,6 @@ appsettings.*.local.json
 # Frontend
 node_modules/
 dist/
+
+# Archivos temporales de Excel
+~$*.xlsx
