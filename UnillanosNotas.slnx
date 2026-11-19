@@ -44,6 +44,10 @@
   <Folder Name="/services/gateway/tests/">
     <Project Path="services/gateway/tests/Gateway.IntegrationTests/Gateway.IntegrationTests.csproj" />
   </Folder>
+  <Folder Name="/services/horarios/" />
+  <Folder Name="/services/horarios/src/">
+    <Project Path="services/horarios/src/Horarios.Api/Horarios.Api.csproj" />
+  </Folder>
   <Folder Name="/services/usuarios/" />
   <Folder Name="/services/usuarios/src/">
     <Project Path="services/usuarios/src/Usuarios.Api/Usuarios.Api.csproj" />

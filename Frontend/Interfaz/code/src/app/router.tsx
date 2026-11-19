@@ -1,4 +1,5 @@
 import { Navigate, Outlet, createBrowserRouter } from 'react-router-dom';
+import { HorarioPage } from '@/features/horarios/HorarioPage';
 import type { Rol } from '@/types';
 import { useSesion } from '@/hooks';
 import { Cargando } from '@/ui';
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
       path: '/e', element: <AppShell />,
       children: [
         { index: true, element: <InicioEstudiante /> },
+        { path: 'horario', element: <HorarioPage /> },
         { path: 'cursos', element: <CursosEstudiante /> },
         { path: 'cursos/:cursoId', element: <CursoEstudiante /> },
         { path: 'cursos/:cursoId/actividades/:actividadId', element: <ActividadPage /> },
@@ -40,6 +42,7 @@ export const router = createBrowserRouter([
       path: '/d', element: <AppShell />,
       children: [
         { index: true, element: <InicioDocente /> },
+        { path: 'horario', element: <HorarioPage /> },
         { path: 'cursos', element: <CursosDocente /> },
         { path: 'cursos/:cursoId', element: <CursoDocente /> },
       ],

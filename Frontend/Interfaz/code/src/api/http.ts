@@ -67,6 +67,13 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
     return [...ids].map(e => combinar(notas.find(c => c.estudianteId === e), entregas.find(x => x.estudianteId === e && x.estado === 'ENVIADA'), id, e));
   };
   return {
+    horarios: {
+      semana: () => req('GET', '/horarios/semana', z.array(z.object({
+        cursoId: z.string(), codigo: z.string(), nombre: z.string(), dia: z.number().int().min(1).max(6),
+        inicio: z.string().regex(/^(?:0[6-9]|1[0-7]):[0-5]\d$/),
+        fin: z.string().regex(/^(?:(?:0[6-9]|1[0-7]):[0-5]\d|18:00)$/), aula: z.string(),
+      }).refine(b => b.inicio < b.fin))),
+    },
     auth: {
       async login(input) {
         const dto = await req('POST', '/auth/login', z.object({ accessToken: z.string(), usuario: usuarioRespuesta }), { usuario: input.usuario, password: input.contrasena });
@@ -153,6 +160,9 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
       descargarArchivo: archivoUrl,
     },
     asistente: {
+      notasParaImportar: id => req('GET', `/actividades/${encodeURIComponent(id)}/calificaciones`,
+        z.array(z.object({ estudianteId: z.string(), valor: z.number(), version: z.string().nullish().transform(v => v ?? null) }))),
+      importarNotas: (id, filas) => req('POST', `/actividades/${encodeURIComponent(id)}/calificaciones/importar`, z.number().int(), filas),
       enviar: input => req('POST', '/asistente/mensajes', respuestaAsistenteDto, { mensaje: input.mensaje, ...(input.conversacionId ? { conversacionId: input.conversacionId } : {}) }),
       confirmar: id => req('POST', `/asistente/acciones/${encodeURIComponent(id)}/confirmar`, z.object({ valor: z.number(), estado: z.string() })),
       async cancelar(id) { await req('POST', `/asistente/acciones/${encodeURIComponent(id)}/cancelar`, vacio); },

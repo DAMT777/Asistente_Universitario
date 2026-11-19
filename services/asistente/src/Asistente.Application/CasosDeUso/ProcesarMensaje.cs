@@ -58,6 +58,7 @@ public sealed class ProcesarMensaje(
         var definiciones = herramientas
             .Select(h => new DefinicionHerramienta(h.Nombre, h.Descripcion, JsonDocument.Parse(h.EsquemaJson).RootElement.Clone()))
             .ToList();
+        var soloLectura = herramientas.Where(h => !h.EsEscritura).ToArray();
         var contexto = new ContextoTurno(usuario);
         var mensajes = new List<MensajeLlm>
         {
@@ -73,7 +74,10 @@ public sealed class ProcesarMensaje(
         for (var vuelta = 0; vuelta <= maximo; vuelta++)
         {
             var sinMasHerramientas = realizadas >= maximo;
-            var respuesta = await llm.CompletarAsync(mensajes, sinMasHerramientas ? [] : definiciones, ct);
+            // Una propuesta solo puede originarse en el mensaje del profesor, antes de recibir datos de herramientas.
+            IReadOnlyList<IHerramienta> habilitadas = vuelta == 0 ? herramientas : soloLectura;
+            var disponibles = definiciones.Where(d => habilitadas.Any(h => h.Nombre == d.Nombre)).ToList();
+            var respuesta = await llm.CompletarAsync(mensajes, sinMasHerramientas ? [] : disponibles, ct);
             if (respuesta.Llamadas.Count == 0)
             {
                 respuestaFinal = respuesta.Texto;
@@ -91,10 +95,12 @@ public sealed class ProcesarMensaje(
                 else
                 {
                     realizadas++;
-                    resultado = await EjecutarHerramientaAsync(herramientas, llamada, contexto, ct);
+                    resultado = await EjecutarHerramientaAsync(habilitadas, llamada, contexto, ct);
                 }
+                if (contexto.AccionCreada is not null) break;
                 mensajes.Add(new MensajeLlm(RolesMensaje.Herramienta, JsonSerializer.Serialize(resultado, Json), LlamadaId: llamada.Id));
             }
+            if (contexto.AccionCreada is not null) break;
         }
 
         var accion = contexto.AccionCreada;
@@ -102,7 +108,7 @@ public sealed class ProcesarMensaje(
             ? "No pude completar la consulta. Intenta formularla de otra manera."
             : respuestaFinal;
         if (accion is not null)
-            respuestaFinal += $"\n\nPropuesta pendiente de confirmación: {accion.Resumen}";
+            respuestaFinal = $"Propuesta pendiente de confirmación: {accion.Resumen}";
 
         return new RespuestaMensaje(conversacionId, respuestaFinal,
             accion is null ? null : new AccionPendienteDto(accion.Id, accion.Resumen, accion.ExpiraEn));
@@ -115,12 +121,15 @@ public sealed class ProcesarMensaje(
         if (herramienta is null)
         {
             // El modelo pidió algo que no se le entregó (p. ej. un estudiante "intentando" proponer una nota).
-            logger.LogWarning("Herramienta no permitida {Herramienta} para rol {Rol}", llamada.Nombre, contexto.Usuario.Rol);
+            logger.LogWarning("Llamada a herramienta no autorizada para rol {Rol}", contexto.Usuario.Rol);
             await auditoria.RegistrarAsync(RegistroAuditoria.Crear(
                 contexto.Usuario.Id, contexto.Usuario.Rol, AccionesAuditoria.HerramientaRechazada, null,
                 null, JsonSerializer.Serialize(new { herramienta = Recortar(llamada.Nombre) }), "RECHAZADA", reloj.GetUtcNow()), ct);
             return new ErrorHerramienta("Esa herramienta no está disponible para este usuario.");
         }
+
+        if (llamada.ArgumentosJson.Length > 4000)
+            return new ErrorHerramienta("Argumentos fuera de los límites permitidos.");
 
         JsonElement argumentos;
         try
@@ -134,13 +143,16 @@ public sealed class ProcesarMensaje(
             return new ErrorHerramienta("Los argumentos no son JSON válido.");
         }
 
+        if (argumentos.ValueKind != JsonValueKind.Object)
+            return new ErrorHerramienta("Argumentos fuera de los límites permitidos.");
+
         try
         {
             return await herramienta.EjecutarAsync(argumentos, contexto, ct);
         }
         catch (ErrorRemotoException e) when (e.Status is 403 or 404 or 422 or 400)
         {
-            return new ErrorHerramienta($"El sistema respondió {e.Codigo}: {e.Message}");
+            return new ErrorHerramienta("El sistema no pudo atender la consulta con esos datos.");
         }
     }
 

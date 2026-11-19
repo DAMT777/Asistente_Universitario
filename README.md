@@ -14,6 +14,7 @@ Frontend (React, 5173) -> API Gateway (YARP, 5000) -> Usuarios (5001) · Evaluac
 | `services/usuarios/` | Login (CU-01) contra `usuarios_db` (EF Core; en desarrollo, base en memoria con los usuarios de prueba), `/auth/me` y emisión del JWT RS256. |
 | `services/evaluaciones/` | Cursos, pesos de los cortes y actividades (CU-02, CU-03), calificaciones de actividad (CU-05 a CU-08), ponderado y publicación de cortes (CU-09 a CU-12) y notas del estudiante (CU-15, CU-16). |
 | `services/entregas/` | Entregas con uno o varios archivos en Blob Storage (CU-13, CU-14) y su consulta por el profesor. |
+| `services/horarios/` | Horario semanal de los cursos del estudiante o profesor (5005). |
 | `services/compartido/` | `Unillanos.ServiceDefaults` (errores, JWT, correlación, health, logs) y `Unillanos.Pruebas.Compartidas` (ayudas de prueba y lector de contratos). |
 | `contracts/` | Contratos OpenAPI: la fuente de verdad de la API. |
 | `infra/` | `docker-compose.yml`, `.env.example` y scripts de llaves y tokens de desarrollo. |

@@ -115,6 +115,7 @@ services:
       ReverseProxy__Clusters__usuarios__Destinations__principal__Address: http://usuarios:8080/
       ReverseProxy__Clusters__evaluaciones__Destinations__principal__Address: http://evaluaciones:8080/
       ReverseProxy__Clusters__entregas__Destinations__principal__Address: http://entregas:8080/
+      ReverseProxy__Clusters__horarios__Destinations__principal__Address: http://horarios:8080/
       ReverseProxy__Clusters__asistente__Destinations__principal__Address: http://asistente:8080/
     ports:
       - "5000:8080"
@@ -124,6 +125,22 @@ services:
       - usuarios
       - evaluaciones
       - entregas
+      - horarios
+
+  horarios:
+    build:
+      context: ..
+      dockerfile: services/horarios/Dockerfile
+    environment:
+      <<: *jwt
+      ASPNETCORE_ENVIRONMENT: Development
+      Evaluaciones__BaseUrl: http://evaluaciones:8080/
+    ports:
+      - "5005:8080"
+    volumes:
+      - ./keys/jwt-public.pem:/keys/jwt-public.pem:ro
+    depends_on:
+      - evaluaciones
 
   # Asistente IA (opcional). Sin X-Service-Key ni acceso a otras bases: vuelve a entrar por el gateway con el JWT del usuario.
   asistente:
@@ -139,7 +156,7 @@ services:
       Llm__BaseUrl: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
       # Sin LLM_API_KEY en infra/.env solo este contenedor falla al iniciar; el resto del sistema no depende de él.
       Llm__ApiKey: ${LLM_API_KEY:-}
-      Llm__Model: ${LLM_MODEL:-openai/gpt-oss-120b}
+      Llm__Model: ${LLM_MODEL:-openai/gpt-oss-20b}
       Llm__TimeoutSeconds: "15"
       Asistente__ExpiracionAccionMinutos: "5"
       Asistente__MaxLlamadasHerramientas: "5"

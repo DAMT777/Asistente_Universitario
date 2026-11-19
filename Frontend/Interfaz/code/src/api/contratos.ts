@@ -5,7 +5,18 @@ import type { Actividad, ArchivoEntrega, Calificacion, Corte, Curso, Publicacion
  * - createHttpApi: REST real (fetch, funciona igual en web y React Native).
  * - createMockApi: memoria con datos de ejemplo para desarrollo y demos.
  */
+export interface BloqueHorario {
+  cursoId: string;
+  codigo: string;
+  nombre: string;
+  dia: number;
+  inicio: string;
+  fin: string;
+  aula: string;
+}
+
 export interface ApiClient {
+  horarios: { semana(): Promise<BloqueHorario[]> };
   cortes: {
     listar(cursoId?: string): Promise<PublicacionCorte[]>;
     publicar(input: { cursoId: string; estudianteId: string; corte: Corte; omitirBorradores: boolean; corregir: boolean }): Promise<PublicacionCorte>;
@@ -41,11 +52,20 @@ export interface ApiClient {
   };
   /** Asistente IA (contracts/asistente.yaml). Nunca escribe sin confirmar: proponer solo crea una acción pendiente. */
   asistente: {
+    notasParaImportar?(actividadId: string): Promise<{ estudianteId: string; valor: number; version: string | null }[]>;
+    importarNotas?(actividadId: string, filas: NotaParaImportar[]): Promise<number>;
     enviar(input: { mensaje: string; conversacionId?: string }): Promise<RespuestaAsistente>;
     /** Ejecuta la acción pendiente (la nota queda en borrador). Devuelve la nota guardada. */
     confirmar(accionId: string): Promise<{ valor: number; estado: string }>;
     cancelar(accionId: string): Promise<void>;
   };
+}
+
+export interface NotaParaImportar {
+  estudianteId: string;
+  nota: number;
+  existia: boolean;
+  version: string | null;
 }
 
 export interface AccionPendiente {

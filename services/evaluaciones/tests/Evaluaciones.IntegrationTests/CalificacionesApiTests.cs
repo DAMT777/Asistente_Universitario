@@ -11,6 +11,42 @@ namespace Evaluaciones.IntegrationTests;
 /// </summary>
 public class CalificacionesApiTests
 {
+    [Fact]
+    public async Task Importar_calificaciones_guarda_el_lote_en_borrador()
+    {
+        await using var f = new FabricaApi();
+        var profesor = f.ClienteProfesor();
+        var url = $"/actividades/{FabricaApi.Parcial1}/calificaciones";
+        var respuesta = await profesor.PostAsJsonAsync(url + "/importar", new[]
+        {
+            new { estudianteId = FabricaApi.Marta, nota = 0m, existia = false, version = (string?)null }
+        });
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        Assert.Equal(1, await respuesta.Content.ReadFromJsonAsync<int>());
+        var fila = (await Json(await profesor.GetAsync(url))).EnumerateArray()
+            .Single(x => x.GetProperty("estudianteId").GetGuid() == FabricaApi.Marta);
+        Assert.Equal(0m, fila.GetProperty("valor").GetDecimal());
+        Assert.Equal("BORRADOR", fila.GetProperty("estado").GetString());
+    }
+
+    [Fact]
+    public async Task Importar_calificaciones_rechaza_el_lote_completo_si_una_fila_es_invalida()
+    {
+        await using var f = new FabricaApi();
+        var profesor = f.ClienteProfesor();
+        var url = $"/actividades/{FabricaApi.Parcial1}/calificaciones";
+        var respuesta = await profesor.PostAsJsonAsync(url + "/importar", new[]
+        {
+            new { estudianteId = FabricaApi.Marta, nota = 4m, existia = false, version = (string?)null },
+            new { estudianteId = FabricaApi.Ana, nota = 6m, existia = false, version = (string?)null }
+        });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, respuesta.StatusCode);
+        Assert.DoesNotContain((await Json(await profesor.GetAsync(url))).EnumerateArray(),
+            x => x.GetProperty("estudianteId").GetGuid() == FabricaApi.Marta);
+    }
+
     private static readonly Guid EntregaProyectoAna = new("e0000000-0000-0000-0000-000000000003");
 
     private static async Task<JsonElement> Json(HttpResponseMessage r) =>

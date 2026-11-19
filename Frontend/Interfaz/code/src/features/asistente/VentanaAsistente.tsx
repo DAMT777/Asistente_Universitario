@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState, type CSSProperties, type Keyboar
 import { useAsistente, useUsuario, type MensajeChat } from '@/hooks';
 import { colors, font, motion, radius, space, web } from '@/theme/tokens';
 import { Boton, Icono, icono, conOnda, entrada } from '@/ui';
+import { ImportarNotas } from './ImportarNotas';
 import { useToast } from '@/ui/Toast';
 
 const MAX_CARACTERES = 1000;
@@ -104,6 +105,7 @@ export function VentanaAsistente({ estado, onCambiar }: { estado: EstadoVentana;
         {chat.enviando && <Escribiendo />}
       </div>
 
+      {docente && <ImportarNotas />}
       <form onSubmit={(e) => { e.preventDefault(); void enviar(); }} style={{ padding: '10px 12px 12px', display: 'flex', alignItems: 'flex-end', gap: space[2] }}>
         <textarea
           ref={campo}

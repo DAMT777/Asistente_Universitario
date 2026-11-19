@@ -104,6 +104,16 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         return espera(nueva);
       },
     },
+    horarios: {
+      async semana() {
+        if (!usuario) throw new ApiError(401, 'Inicia sesión.');
+        const curso = db.cursos[0];
+        return espera(curso ? [
+          { cursoId: curso.id, codigo: curso.codigo, nombre: curso.nombre, dia: 1, inicio: '08:00', fin: '10:00', aula: 'Laboratorio 1' },
+          { cursoId: curso.id, codigo: curso.codigo, nombre: curso.nombre, dia: 4, inicio: '14:00', fin: '16:00', aula: 'Laboratorio 1' },
+        ] : []);
+      },
+    },
     auth: {
       async login({ usuario: u }) {
         // Como el servicio real: el rol sale de la cuenta, no de lo que elija la persona.

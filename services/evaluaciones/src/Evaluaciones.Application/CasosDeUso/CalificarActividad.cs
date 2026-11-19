@@ -17,7 +17,7 @@ namespace Evaluaciones.Application.CasosDeUso;
 /// </list>
 /// Toda calificación nueva queda en BORRADOR y el estudiante no la ve (RN-08, RN-09).
 /// </summary>
-public sealed class CalificarActividad(
+public sealed partial class CalificarActividad(
     ICursoRepository cursos,
     IInscripcionRepository inscripciones,
     IActividadRepository actividades,

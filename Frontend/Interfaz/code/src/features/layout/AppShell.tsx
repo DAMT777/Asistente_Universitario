@@ -29,6 +29,7 @@ export function AppShell() {
   const items = [
     { to: base, end: true, label: 'Inicio', d: icono.inicio },
     { to: `${base}/cursos`, end: false, label: 'Cursos', d: icono.cursos },
+    { to: `${base}/horario`, end: false, label: 'Horario', d: icono.calendario },
     ...(u.rol === 'estudiante' ? [{ to: '/e/notas', end: false, label: 'Notas', d: icono.notas }] : []),
   ];
 

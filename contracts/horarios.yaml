@@ -1,0 +1,55 @@
+﻿openapi: 3.1.0
+info:
+  title: Servicio de horarios
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+security:
+  - bearerAuth: []
+paths:
+  /horarios/semana:
+    get:
+      operationId: obtenerHorarioSemanal
+      summary: Consulta el horario semanal de los cursos del usuario autenticado.
+      responses:
+        "200":
+          description: Bloques ordenados por día y hora de inicio en hora de Colombia.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [cursoId, codigo, nombre, dia, inicio, fin, aula]
+                  properties:
+                    cursoId:
+                      type: string
+                      format: uuid
+                    codigo:
+                      type: string
+                    nombre:
+                      type: string
+                    dia:
+                      type: integer
+                      minimum: 1
+                      maximum: 6
+                    inicio:
+                      type: string
+                      pattern: '^(0[6-9]|1[0-7]):[0-5][0-9]$'
+                    fin:
+                      type: string
+                      pattern: '^((0[6-9]|1[0-7]):[0-5][0-9]|18:00)$'
+                    aula:
+                      type: string
+        "401":
+          description: Token ausente o inválido.
+        "403":
+          description: El rol carece de acceso.
+        "503":
+          description: Evaluaciones no está disponible.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

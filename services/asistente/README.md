@@ -18,7 +18,7 @@ Las herramientas que recibe el modelo dependen del claim `rol`. Contrato: [`cont
 | `Services__GatewayBaseUrl` | — | p. ej. `http://gateway:8080` |
 | `Llm__BaseUrl` | `https://api.groq.com/openai/v1` | API compatible con OpenAI |
 | `Llm__ApiKey` | — | Solo en `infra/.env` (`LLM_API_KEY`) |
-| `Llm__Model` | — | p. ej. `openai/gpt-oss-120b` |
+| `Llm__Model` | — | p. ej. `openai/gpt-oss-20b` |
 | `Llm__TimeoutSeconds` | 15 | |
 | `Asistente__ExpiracionAccionMinutos` | 5 | |
 | `Asistente__MaxLlamadasHerramientas` | 5 | por mensaje |
@@ -60,3 +60,16 @@ dotnet test services/asistente/Asistente.slnx
 
 Ninguna prueba llama a Groq: usan un doble de `ILlmClient` con respuestas guionizadas y WireMock como gateway y como proveedor.
 Las de integración necesitan Docker (SQL Server con Testcontainers).
+
+## Importar notas como profesor
+
+En Sirius, abre **Importar notas desde Excel**, selecciona la materia y la actividad y carga un archivo .xlsx. La primera hoja debe contener dos columnas, en este orden:
+
+| codigo | nota |
+|---|---|
+| E0001 | 3.8 |
+| E0002 | 4.2 |
+
+Usa el código institucional exacto, en formato texto si tiene ceros al inicio. El archivo admite hasta 250 estudiantes y 256 KB. Las notas van de 0 a 5 con máximo un decimal. La vista previa muestra las notas actuales y las nuevas. Al confirmar, las notas nuevas o modificadas quedan en borrador. Si una calificación cambió después de la vista previa, revisa el archivo nuevamente.
+
+El navegador lee el Excel y envía a Evaluaciones únicamente los identificadores, notas y versiones necesarios para guardar el lote. El modelo de IA no recibe el archivo ni participa en la importación.

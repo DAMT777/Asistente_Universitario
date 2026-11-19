@@ -42,6 +42,11 @@ public sealed class ActividadesController(
         return Ok(resultado);
     }
 
+    [HttpPost("{actividadId:guid}/calificaciones/importar")]
+    [RequestSizeLimit(64_000)]
+    public async Task<ActionResult<int>> Importar(Guid actividadId, [FromBody] List<NotaImportada> filas, CancellationToken ct) =>
+        Ok(await calificar.ImportarAsync(User.ObtenerId(), actividadId, filas, ct));
+
     /// <summary>CU-08. Publica los borradores de la actividad para que los estudiantes los vean.</summary>
     [HttpPost("{actividadId:guid}/calificaciones/publicar")]
     public async Task<ActionResult<ResultadoPublicacionCalificaciones>> Publicar(Guid actividadId, CancellationToken ct) =>

@@ -1,0 +1,77 @@
+﻿.au-horario {
+  min-width: 0;
+  width: 100%;
+}
+
+.au-horario h1 {
+  margin: 0;
+}
+
+.au-horario-subtitulo {
+  margin: 6px 0 16px;
+  font-size: 0.9rem;
+}
+
+.au-horario-scroll {
+  overflow-x: auto;
+  border: 1px solid #ded9da;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.au-horario-grilla {
+  min-width: 760px;
+  padding: 0 0 16px;
+  display: grid;
+  grid-template-columns: 56px repeat(6, minmax(0, 1fr));
+}
+
+.au-horario-dia {
+  padding: 12px 4px 14px;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.au-horario-horas,
+.au-horario-columna {
+  position: relative;
+  height: 576px;
+}
+
+.au-horario-horas span {
+  position: absolute;
+  right: 9px;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.au-horario-columna {
+  border-left: 1px solid #ded9da;
+  border-bottom: 1px solid #ded9da;
+  background: repeating-linear-gradient(to bottom, #eee9ea 0 1px, transparent 1px 48px);
+}
+
+.au-horario-clase {
+  box-sizing: border-box;
+  position: absolute;
+  overflow: hidden;
+  padding: 4px;
+  border: 1px solid #d68b96;
+  border-radius: 6px;
+  background: #fff0f2;
+  color: #621b27;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.73rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.au-horario-clase:hover,
+.au-horario-clase:focus-visible {
+  background: #ffdfe4;
+  text-decoration: underline;
+  z-index: 1;
+}

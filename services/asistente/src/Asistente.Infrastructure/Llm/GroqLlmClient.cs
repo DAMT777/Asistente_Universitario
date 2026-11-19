@@ -34,7 +34,7 @@ public sealed class GroqLlmClient(HttpClient http, IOptions<LlmOpciones> opcione
                 m.LlamadaId)).ToList(),
             herramientas.Count == 0 ? null : herramientas.Select(h => new Tool("function", new DefFuncion(h.Nombre, h.Descripcion, h.Parametros))).ToList(),
             herramientas.Count == 0 ? null : "auto",
-            0.1);
+            0.1, 768);
 
         HttpResponseMessage respuesta;
         try
@@ -80,7 +80,7 @@ public sealed class GroqLlmClient(HttpClient http, IOptions<LlmOpciones> opcione
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", o.ApiKey);
     }
 
-    private sealed record Solicitud(string Model, List<Mensaje> Messages, List<Tool>? Tools, string? ToolChoice, double Temperature);
+    private sealed record Solicitud(string Model, List<Mensaje> Messages, List<Tool>? Tools, string? ToolChoice, double Temperature, int MaxCompletionTokens);
     private sealed record Mensaje(string Role, string? Content, List<LlamadaTool>? ToolCalls, string? ToolCallId);
     private sealed record LlamadaTool(string Id, string Type, Funcion Function);
     private sealed record Funcion(string Name, string? Arguments);
