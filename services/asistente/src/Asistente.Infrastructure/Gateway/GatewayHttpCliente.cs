@@ -15,6 +15,8 @@ public sealed class GatewayHttpCliente(HttpClient http) : IGatewayCliente
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    public Task<IReadOnlyList<BloqueHorario>> HorarioSemanalAsync(CancellationToken ct) =>
+        LeerAsync<IReadOnlyList<BloqueHorario>>("horarios/semana", ct);
     public Task<MatrizNotas> MisNotasAsync(CancellationToken ct) => LeerAsync<MatrizNotas>("mis-notas", ct);
     public Task<NotasCurso> MisNotasDeCursoAsync(Guid cursoId, CancellationToken ct) => LeerAsync<NotasCurso>($"mis-notas/cursos/{cursoId}/actividades", ct);
     public Task<IReadOnlyList<EntregaPropia>> MisEntregasAsync(CancellationToken ct) => LeerAsync<IReadOnlyList<EntregaPropia>>("mis-entregas", ct);

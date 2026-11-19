@@ -32,15 +32,33 @@ public sealed class ConsultarMisNotas(IGatewayCliente gateway) : IHerramienta
 public sealed class ConsultarNotasCurso(IGatewayCliente gateway) : IHerramienta
 {
     public string Nombre => "consultar_notas_curso";
-    public string Descripcion => "Notas publicadas y retroalimentación de cada actividad (talleres, parciales, proyectos) de un curso del estudiante. Las no publicadas salen SIN_CALIFICAR. El curso se puede omitir si el estudiante tiene uno solo.";
-    public string EsquemaJson => """{"type":"object","properties":{"curso":{"type":"string","description":"Código o nombre del curso; opcional si tiene uno solo"}},"additionalProperties":false}""";
+    public string Descripcion => "Notas publicadas y retroalimentación de cada actividad (talleres, parciales, proyectos) de un curso del estudiante. Las no publicadas salen SIN_CALIFICAR. Si se omite el curso, consulta las notas publicadas de las actividades en sus cursos.";
+    public string EsquemaJson => """{"type":"object","properties":{"curso":{"type":"string","description":"Código o nombre del curso; si se omite, consulta todos"}},"additionalProperties":false}""";
     public string RolPermitido => UsuarioAsistente.Estudiante;
     public bool EsEscritura => false;
 
     public async Task<object> EjecutarAsync(JsonElement argumentos, ContextoTurno contexto, CancellationToken ct)
     {
         var matriz = await gateway.MisNotasAsync(ct);
-        var r = Cursos.Resolver(Argumentos.Texto(argumentos, "curso"),
+        var nombreCurso = Argumentos.Texto(argumentos, "curso");
+        if (string.IsNullOrWhiteSpace(nombreCurso) && matriz.Cursos.Count != 1)
+        {
+            const int maxCursos = 5;
+            const int maxNotas = 20;
+            var cursos = new List<object>();
+            var parcial = matriz.Cursos.Count > maxCursos;
+            foreach (var curso in matriz.Cursos.Take(maxCursos))
+            {
+                var notasCurso = await gateway.MisNotasDeCursoAsync(curso.CursoId, ct);
+                var publicadas = notasCurso.Actividades.Where(a => a.Estado == "PUBLICADA").ToArray();
+                parcial |= publicadas.Length > maxNotas;
+                cursos.Add(new { curso.Nombre, curso.Codigo,
+                    NotasPublicadas = publicadas.Take(maxNotas).Select(a => new { a.Titulo, a.Corte, a.Nota }).ToList() });
+            }
+            return new { Cursos = cursos, ResultadoParcial = parcial };
+        }
+
+        var r = Cursos.Resolver(nombreCurso,
             matriz.Cursos.Select(c => new CursoProfesor(c.CursoId, c.Codigo, c.Nombre)).ToList());
         if (r.Tipo != TipoCoincidencia.Unica) return Cursos.Preguntar("el curso", r with { Candidatos = r.Tipo == TipoCoincidencia.Ninguna ? matriz.Cursos.Select(c => new Candidato(c.CursoId, c.Nombre, c.Codigo)).ToList() : r.Candidatos });
 

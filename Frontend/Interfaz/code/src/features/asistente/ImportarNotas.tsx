@@ -1,16 +1,23 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent, type RefObject } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NotaParaImportar } from '@/api/contratos';
 import { useApi, useCursos } from '@/hooks';
+import { colors } from '@/theme/tokens';
 
 import { leerNotas } from './leerNotas';
 
 type Fila = NotaParaImportar & { codigo: string; nombre: string; anterior?: number };
 
-export function ImportarNotas() {
+export function ImportarNotas({ id, abierto, campo, onCerrar }: {
+  id: string;
+  abierto: boolean;
+  campo: RefObject<HTMLInputElement>;
+  onCerrar: () => void;
+}) {
   const { api } = useApi();
   const cache = useQueryClient();
   const cursos = useCursos();
+  const materia = useRef<HTMLSelectElement>(null);
   const [curso, setCurso] = useState('');
   const [actividad, setActividad] = useState('');
   const actividades = useQuery({ queryKey: ['importar-actividades', curso], queryFn: () => api.actividades.listar(curso), enabled: !!curso });
@@ -18,10 +25,17 @@ export function ImportarNotas() {
   const [filas, setFilas] = useState<Fila[]>([]);
   const [mensaje, setMensaje] = useState('');
   const [ocupado, setOcupado] = useState(false);
-  const campo = useRef<HTMLInputElement>(null);
+
   const { notasParaImportar, importarNotas } = api.asistente;
 
-  if (!notasParaImportar || !importarNotas) return null;
+  if (!notasParaImportar || !importarNotas) {
+    return (
+      <section id={id} hidden={!abierto} aria-label="Adjuntar Excel de notas" style={{ padding: '6px 12px' }}>
+        <button type="button" onClick={onCerrar}>Cerrar adjunto</button>
+        <p>Conecta la aplicación al backend e inicia sesión como profesor para importar calificaciones.</p>
+      </section>
+    );
+  }
 
   function limpiar() {
     setFilas([]);
@@ -73,11 +87,14 @@ export function ImportarNotas() {
   }
 
   return (
-    <details style={{ padding: '4px 14px', maxHeight: '45%', overflow: 'auto', borderTop: '1px solid #e5e5e5' }}>
-      <summary style={{ cursor: 'pointer' }}>Importar notas desde Excel</summary>
+    <section id={id} hidden={!abierto} aria-label="Adjuntar Excel de notas" style={{ padding: '6px 12px', flexShrink: 0, maxHeight: '54%', overflow: 'auto', borderTop: '1px solid var(--au-linea)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <strong style={{ overflowWrap: 'anywhere', color: colors.marcaTexto }}>{archivo?.name ?? 'Adjuntar Excel de notas (.xlsx)'}</strong>
+        <button type="button" disabled={ocupado} onClick={onCerrar}>Cerrar</button>
+      </div>
       <form onSubmit={e => void revisar(e)}>
         <fieldset disabled={ocupado} style={{ display: 'grid', gap: 8, border: 0, padding: '8px 0', margin: 0, minWidth: 0 }}>
-          <label>Materia <select aria-label="Materia" required value={curso} onChange={e => { setCurso(e.target.value); setActividad(''); limpiar(); }}>
+          <label>Materia <select ref={materia} aria-label="Materia" required value={curso} onChange={e => { setCurso(e.target.value); setActividad(''); limpiar(); }}>
             <option value="">Seleccionar</option>
             {cursos.data?.map(c => <option key={c.id} value={c.id}>{c.codigo} · {c.nombre} · Grupo {c.grupo}</option>)}
           </select></label>
@@ -85,7 +102,7 @@ export function ImportarNotas() {
             <option value="">Seleccionar</option>
             {curso && actividades.data?.map(a => <option key={a.id} value={a.id}>{a.titulo} · Corte {a.corte}</option>)}
           </select></label>
-          <label>Archivo .xlsx <input ref={campo} type="file" accept=".xlsx" required onChange={e => { setArchivo(e.target.files?.[0]); limpiar(); }} /></label>
+          <input ref={campo} type="file" accept=".xlsx" hidden onChange={e => { setArchivo(e.target.files?.[0]); limpiar(); materia.current?.focus(); }} />
           <small>Primera hoja con encabezados <strong>codigo</strong> y <strong>nota</strong>. Hasta 250 filas.</small>
           <button type="submit" disabled={!archivo || !actividad}>Revisar notas</button>
         </fieldset>
@@ -107,6 +124,6 @@ export function ImportarNotas() {
       )}
       {ocupado && <small role="status">Procesando…</small>}
       {mensaje && <p role="status">{mensaje}</p>}
-    </details>
+    </section>
   );
 }

@@ -30,6 +30,18 @@ public static class SemillaUsuarios
         await db.SaveChangesAsync(ct);
     }
 
+    public static async Task AgregarProfesorTecnologiasAsync(IServiceProvider servicios, CancellationToken ct = default)
+    {
+        const string id = "a0000000-0000-0000-0000-000000000002";
+        using var alcance = servicios.CreateScope();
+        var db = alcance.ServiceProvider.GetRequiredService<UsuariosDbContext>();
+        var profesorId = Guid.Parse(id);
+        if (await db.Usuarios.AnyAsync(u => u.Id == profesorId, ct)) return;
+
+        Agregar(db, id, "1000000002", "P0002", "Laura Torres Demo", "laura.torres@demo.unillanos.edu.co", Roles.Profesor);
+        await db.SaveChangesAsync(ct);
+    }
+
     private static void Agregar(UsuariosDbContext db, string id, string documento, string codigo, string nombre, string correo, string rol)
     {
         var usuario = new Usuario

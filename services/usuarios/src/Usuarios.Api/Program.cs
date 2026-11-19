@@ -63,7 +63,11 @@ var app = builder.Build();
 
 // Los usuarios de prueba solo existen en desarrollo (sección 9.8).
 if (app.Environment.IsDevelopment())
+{
     await SemillaUsuarios.AplicarAsync(app.Services);
+    if (app.Configuration.GetValue<bool>("Demo:TecnologiasAvanzadas"))
+        await SemillaUsuarios.AgregarProfesorTecnologiasAsync(app.Services);
+}
 else if (enMemoria)
     await EnsureCreatedAsync(app.Services);
 

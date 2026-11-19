@@ -48,7 +48,7 @@ public sealed class EstudianteTests(AsistenteFixture fixture) : PruebaAsistente(
 
         Assert.Null(r.AccionPendiente);
         Assert.All(Llm.Recibido, x => Assert.DoesNotContain("proponer_calificacion", x.Herramientas));
-        Assert.Equal(["consultar_mis_notas", "consultar_notas_curso", "consultar_mis_entregas"], Llm.Recibido[0].Herramientas);
+        Assert.Equal(["consultar_mis_notas", "consultar_notas_curso", "consultar_mis_entregas", "consultar_mi_horario", "consultar_actividades_curso"], Llm.Recibido[0].Herramientas);
         Assert.Contains("no está disponible", Assert.Single(Llm.ResultadosHerramientas));
         var (acciones, auditoria) = await BaseAsync();
         Assert.Empty(acciones);

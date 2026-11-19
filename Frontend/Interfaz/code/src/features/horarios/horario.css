@@ -1,22 +1,17 @@
-﻿.au-horario {
+.au-horario {
   min-width: 0;
   width: 100%;
 }
 
 .au-horario h1 {
-  margin: 0;
-}
-
-.au-horario-subtitulo {
-  margin: 6px 0 16px;
-  font-size: 0.9rem;
+  margin: 0 0 16px;
 }
 
 .au-horario-scroll {
   overflow-x: auto;
-  border: 1px solid #ded9da;
+  border: 1px solid var(--au-linea-fuerte);
   border-radius: 14px;
-  background: #fff;
+  background: var(--au-c-superficieFuerte);
 }
 
 .au-horario-grilla {
@@ -47,9 +42,9 @@
 }
 
 .au-horario-columna {
-  border-left: 1px solid #ded9da;
-  border-bottom: 1px solid #ded9da;
-  background: repeating-linear-gradient(to bottom, #eee9ea 0 1px, transparent 1px 48px);
+  border-left: 1px solid var(--au-linea-fuerte);
+  border-bottom: 1px solid var(--au-linea-fuerte);
+  background: repeating-linear-gradient(to bottom, var(--au-linea) 0 1px, transparent 1px 48px);
 }
 
 .au-horario-clase {
@@ -57,10 +52,10 @@
   position: absolute;
   overflow: hidden;
   padding: 4px;
-  border: 1px solid #d68b96;
+  border: 1px solid var(--au-c-lineaMarca);
   border-radius: 6px;
-  background: #fff0f2;
-  color: #621b27;
+  background: var(--au-c-marcaSuave);
+  color: var(--au-c-marcaTexto);
   display: flex;
   flex-direction: column;
   font-size: 0.73rem;
@@ -71,7 +66,7 @@
 
 .au-horario-clase:hover,
 .au-horario-clase:focus-visible {
-  background: #ffdfe4;
+  background: var(--au-c-fondoProfundo);
   text-decoration: underline;
   z-index: 1;
 }

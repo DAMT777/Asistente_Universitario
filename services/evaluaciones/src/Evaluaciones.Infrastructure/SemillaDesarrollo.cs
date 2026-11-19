@@ -20,6 +20,9 @@ public static class SemillaDesarrollo
     public static readonly Guid Parcial1 = new("d0000000-0000-0000-0000-000000000002");
     public static readonly Guid Proyecto1 = new("d0000000-0000-0000-0000-000000000003");
 
+    private static readonly Guid TecnologiasId = new("c0000000-0000-0000-0000-000000000002");
+    private static readonly Guid ProfesorTecnologiasId = new("a0000000-0000-0000-0000-000000000002");
+
     // Entregas de demostración del servicio de entregas (mismos identificadores en los dos servicios).
     public static readonly Guid EntregaTallerAna = new("e0000000-0000-0000-0000-000000000001");
     public static readonly Guid EntregaTallerLuis = new("e0000000-0000-0000-0000-000000000002");
@@ -64,6 +67,29 @@ public static class SemillaDesarrollo
         {
             Id = Guid.NewGuid(), CursoId = CursoId, EstudianteId = Ana, Corte = 1, Nota = 3.2m, FechaPublicacion = ahora
         });
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    public static async Task AgregarTecnologiasAvanzadasAsync(IServiceProvider servicios, CancellationToken ct = default)
+    {
+        using var alcance = servicios.CreateScope();
+        var db = alcance.ServiceProvider.GetRequiredService<EvaluacionesDbContext>();
+        if (await db.Cursos.AnyAsync(c => c.Id == TecnologiasId, ct)) return;
+
+        db.Cursos.Add(new Curso
+        {
+            Id = TecnologiasId, Codigo = "603701-1", Nombre = "Tecnologías Avanzadas",
+            ProfesorId = ProfesorTecnologiasId, ProfesorNombre = "Laura Torres Demo",
+            PesoCorte1 = 30, PesoCorte2 = 30, PesoCorte3 = 40
+        });
+        db.Inscripciones.AddRange(
+            new CursoEstudiante { CursoId = TecnologiasId, EstudianteId = Ana, EstudianteNombre = "Ana Demo", EstudianteCodigo = "E0001" },
+            new CursoEstudiante { CursoId = TecnologiasId, EstudianteId = Luis, EstudianteNombre = "Luis Demo", EstudianteCodigo = "E0002" },
+            new CursoEstudiante { CursoId = TecnologiasId, EstudianteId = Marta, EstudianteNombre = "Marta Demo", EstudianteCodigo = "E0003" });
+        db.Actividades.AddRange(
+            new Actividad { Id = new("d0000000-0000-0000-0000-000000000004"), CursoId = TecnologiasId, Titulo = "Evaluación 1", Corte = 1, Peso = 100 },
+            new Actividad { Id = new("d0000000-0000-0000-0000-000000000005"), CursoId = TecnologiasId, Titulo = "Proyecto final", Corte = 3, Peso = 100 });
 
         await db.SaveChangesAsync(ct);
     }

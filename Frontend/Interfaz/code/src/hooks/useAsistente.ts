@@ -12,6 +12,7 @@ export interface MensajeChat {
   texto: string;
   /** Mensaje de error (no lo escribió el modelo). */
   error?: boolean;
+  rechazoSeguridad?: boolean;
   accion?: AccionPendiente & { estado: EstadoAccion; detalle?: string };
   fecha: string;
 }
@@ -77,7 +78,12 @@ export function useAsistente() {
       const respuesta = r.accionPendiente ? r.respuesta.replace(/\n*Propuesta pendiente de confirmación:.*$/s, '').trim() : r.respuesta;
       agregar({ autor: 'asistente', texto: respuesta, accion: r.accionPendiente ? { ...r.accionPendiente, estado: 'pendiente' } : undefined });
     } catch (e) {
-      agregar({ autor: 'asistente', texto: mensajeDeError(e), error: true });
+      agregar({
+        autor: 'asistente',
+        texto: mensajeDeError(e),
+        error: true,
+        rechazoSeguridad: e instanceof ApiError && e.status === 422 && e.codigo === 'MENSAJE_NO_PERMITIDO',
+      });
     } finally {
       setEnviando(false);
     }

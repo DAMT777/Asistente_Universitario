@@ -1,4 +1,4 @@
-﻿using Asistente.Application;
+using Asistente.Application;
 using Asistente.Application.CasosDeUso;
 using Asistente.Application.Herramientas;
 using Asistente.Application.Puertos;
@@ -28,9 +28,25 @@ public sealed class SeguridadDelTurnoTests
         Assert.Single(auditoria.Registros);
     }
 
+    [Fact]
+    public async Task El_chat_rechaza_sintaxis_sql_antes_de_invocar_el_modelo()
+    {
+        var modelo = new ModeloGuionizado();
+        var procesar = new ProcesarMensaje(modelo, new CatalogoHerramientas([]), new AuditoriaEnMemoria(),
+            TimeProvider.System, Options.Create(new AsistenteOpciones()), NullLogger<ProcesarMensaje>.Instance);
+
+        var error = await Assert.ThrowsAsync<ExcepcionAsistente>(() => procesar.EjecutarAsync(
+            new(Guid.NewGuid(), UsuarioAsistente.Profesor), new(null, "SELECT codigo FROM materias"), CancellationToken.None));
+
+        Assert.Equal(CodigosAsistente.MensajeNoPermitido, error.Codigo);
+        Assert.Equal(422, error.Status);
+        Assert.Equal(0, modelo.Turnos);
+    }
+
     private sealed class ModeloGuionizado : ILlmClient
     {
         private int turno;
+        public int Turnos => turno;
 
         public Task<RespuestaLlm> CompletarAsync(IReadOnlyList<MensajeLlm> mensajes,
             IReadOnlyList<DefinicionHerramienta> herramientas, CancellationToken ct)

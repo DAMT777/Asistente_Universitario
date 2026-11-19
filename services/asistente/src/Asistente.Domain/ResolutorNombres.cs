@@ -30,7 +30,7 @@ public static class ResolutorNombres
         if (buscado.Length == 0) return new(TipoCoincidencia.Ninguna, []);
 
         // 1) Código o nombre exacto.
-        var exactos = lista.Where(c => Normalizar(c.Codigo) == buscado || Normalizar(c.Nombre) == buscado).ToList();
+        var exactos = lista.Where(c => CoincideExacto(c, buscado)).ToList();
         if (exactos.Count > 0) return Clasificar(exactos);
 
         // 2) Todas las palabras buscadas aparecen como palabras del nombre.
@@ -41,6 +41,14 @@ public static class ResolutorNombres
             return palabras.All(p => delNombre.Contains(p));
         }).ToList();
         return Clasificar(parciales);
+    }
+
+    private static bool CoincideExacto(Candidato candidato, string buscado)
+    {
+        var nombre = Normalizar(candidato.Nombre);
+        var codigo = Normalizar(candidato.Codigo);
+        return buscado == nombre || buscado == codigo || (codigo.Length > 0 &&
+            (buscado == $"{nombre} {codigo}" || buscado == $"{nombre} ({codigo})" || buscado == $"{codigo} {nombre}"));
     }
 
     private static ResultadoResolucion Clasificar(List<Candidato> encontrados) => encontrados.Count switch

@@ -63,7 +63,7 @@ Las de integración necesitan Docker (SQL Server con Testcontainers).
 
 ## Importar notas como profesor
 
-En Sirius, abre **Importar notas desde Excel**, selecciona la materia y la actividad y carga un archivo .xlsx. La primera hoja debe contener dos columnas, en este orden:
+En Sirius, pulsa el clip **Adjuntar Excel de notas**, selecciona la materia y la actividad y carga un archivo .xlsx. La primera hoja debe contener dos columnas, en este orden:
 
 | codigo | nota |
 |---|---|
@@ -73,3 +73,9 @@ En Sirius, abre **Importar notas desde Excel**, selecciona la materia y la activ
 Usa el código institucional exacto, en formato texto si tiene ceros al inicio. El archivo admite hasta 250 estudiantes y 256 KB. Las notas van de 0 a 5 con máximo un decimal. La vista previa muestra las notas actuales y las nuevas. Al confirmar, las notas nuevas o modificadas quedan en borrador. Si una calificación cambió después de la vista previa, revisa el archivo nuevamente.
 
 El navegador lee el Excel y envía a Evaluaciones únicamente los identificadores, notas y versiones necesarios para guardar el lote. El modelo de IA no recibe el archivo ni participa en la importación.
+
+## Consultar el horario en Sirius
+
+El profesor y el estudiante pueden preguntar «¿Cuál es mi horario inscrito?» o «¿En qué aula tengo clase el jueves?». Sirius consulta `GET /horarios/semana` con el JWT del usuario. Los datos se configuran en el [servicio de horarios](../horarios/README.md). Para incorporar otra consulta, agrega una herramienta que lea el endpoint autorizado del servicio correspondiente y declárala para los roles permitidos.
+
+Sirius permite consultar actividades, cortes, fechas límite y requisitos de entrega de los cursos propios. El docente también puede consultar el estado de las notas de una actividad y la nota de un estudiante inscrito. El chat rechaza patrones de sintaxis SQL antes de llamar al proveedor. Las herramientas solo llaman rutas públicas predefinidas y autorizadas por el JWT.

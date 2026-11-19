@@ -9,6 +9,8 @@ namespace Asistente.Application.Puertos;
 /// </summary>
 public interface IGatewayCliente
 {
+    Task<IReadOnlyList<BloqueHorario>> HorarioSemanalAsync(CancellationToken ct);
+
     // Estudiante
     Task<MatrizNotas> MisNotasAsync(CancellationToken ct);
     Task<NotasCurso> MisNotasDeCursoAsync(Guid cursoId, CancellationToken ct);
@@ -39,5 +41,6 @@ public sealed record ArchivoEntrega(Guid Id, string NombreArchivo, long Tamano);
 public sealed record EntregaPropia(Guid Id, Guid ActividadId, DateTime FechaEnvio, string Estado, IReadOnlyList<ArchivoEntrega> Archivos);
 public sealed record CursoProfesor(Guid Id, string Codigo, string Nombre);
 public sealed record EstudianteInscrito(Guid Id, string Nombre, string Codigo);
-public sealed record ActividadCurso(Guid Id, string Titulo, int Corte, decimal Peso);
+public sealed record ActividadCurso(Guid Id, string Titulo, int Corte, decimal Peso, DateTime? FechaLimite = null, bool RequiereEntrega = false);
 public sealed record CalificacionActividad(Guid EstudianteId, decimal Valor, string Estado, string? Version);
+public sealed record BloqueHorario(string Codigo, string Nombre, int Dia, string Inicio, string Fin, string Aula);

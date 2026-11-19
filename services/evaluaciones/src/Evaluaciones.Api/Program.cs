@@ -96,7 +96,11 @@ if (!DependenciaInfraestructura.UsaBaseEnMemoria(app.Configuration) && app.Confi
 
 // Datos semilla de la guía (9.8), solo en desarrollo y una sola vez, con base en memoria o SQL Server.
 if (app.Environment.IsDevelopment())
+{
     await SemillaDesarrollo.AplicarAsync(app.Services, app.Services.GetRequiredService<TimeProvider>());
+    if (app.Configuration.GetValue<bool>("Demo:TecnologiasAvanzadas"))
+        await SemillaDesarrollo.AgregarTecnologiasAvanzadasAsync(app.Services);
+}
 
 app.UseMiddleware<ManejadorErroresMiddleware>();
 app.UseAuthentication();

@@ -52,6 +52,7 @@ internal sealed class GatewayEscrituras : IGatewayCliente
         Escrituras++;
         return Task.FromResult(JsonDocument.Parse("""{"estado":"BORRADOR"}""").RootElement);
     }
+    public Task<IReadOnlyList<BloqueHorario>> HorarioSemanalAsync(CancellationToken ct) => throw new NotSupportedException();
     public Task<MatrizNotas> MisNotasAsync(CancellationToken ct) => throw new NotSupportedException();
     public Task<NotasCurso> MisNotasDeCursoAsync(Guid cursoId, CancellationToken ct) => throw new NotSupportedException();
     public Task<IReadOnlyList<EntregaPropia>> MisEntregasAsync(CancellationToken ct) => throw new NotSupportedException();

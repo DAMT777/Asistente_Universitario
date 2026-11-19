@@ -10,6 +10,7 @@ public class ExcepcionAsistente(string codigo, string mensaje, int? status = nul
 public static class CodigosAsistente
 {
     public const string ValidacionFallida = "VALIDACION_FALLIDA";
+    public const string MensajeNoPermitido = "MENSAJE_NO_PERMITIDO";
     public const string SinPermiso = "SIN_PERMISO";
     public const string AccionNoEncontrada = "ACCION_NO_ENCONTRADA";
     public const string AccionExpirada = "ACCION_EXPIRADA";

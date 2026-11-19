@@ -14,6 +14,11 @@ public static class DependencyInjection
         services.AddScoped<IHerramienta, ListarCursosProfesor>();
         services.AddScoped<IHerramienta, ListarEstudiantesCurso>();
         services.AddScoped<IHerramienta, ProponerCalificacion>();
+        services.AddScoped<IHerramienta>(sp => new ConsultarMiHorario(sp.GetRequiredService<Puertos.IGatewayCliente>(), UsuarioAsistente.Estudiante));
+        services.AddScoped<IHerramienta>(sp => new ConsultarMiHorario(sp.GetRequiredService<Puertos.IGatewayCliente>(), UsuarioAsistente.Profesor));
+        services.AddScoped<IHerramienta>(sp => new ConsultarActividadesCurso(sp.GetRequiredService<Puertos.IGatewayCliente>(), UsuarioAsistente.Estudiante));
+        services.AddScoped<IHerramienta>(sp => new ConsultarActividadesCurso(sp.GetRequiredService<Puertos.IGatewayCliente>(), UsuarioAsistente.Profesor));
+        services.AddScoped<IHerramienta, ConsultarCalificacionesActividad>();
         services.AddScoped<CatalogoHerramientas>();
         services.AddScoped<ProcesarMensaje>();
         services.AddScoped<GestionarAcciones>();

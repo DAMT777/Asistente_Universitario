@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { useAsistente, useUsuario, type MensajeChat } from '@/hooks';
 import { colors, font, motion, radius, space, web } from '@/theme/tokens';
 import { Boton, Icono, icono, conOnda, entrada } from '@/ui';
@@ -8,8 +8,8 @@ import { useToast } from '@/ui/Toast';
 const MAX_CARACTERES = 1000;
 
 const SUGERENCIAS = {
-  estudiante: ['¿Cuáles son mis notas publicadas?', '¿Cuál es mi definitiva parcial?', '¿Qué entregas he subido?'],
-  docente: ['¿Qué cursos tengo?', '¿Quiénes están inscritos?', 'Ponle 4.2 a Luis en el Taller 1'],
+  estudiante: ['¿Cuáles son mis notas publicadas?', '¿Cuál es mi definitiva parcial?', '¿Qué entregas he subido?', '¿Cuál es mi horario inscrito?'],
+  docente: ['¿Qué cursos tengo?', '¿Cuál es mi horario inscrito?', 'Ponle 4.2 a Luis en el Taller 1'],
 } as const;
 
 export type EstadoVentana = 'cerrada' | 'abierta' | 'minimizada';
@@ -26,6 +26,10 @@ export function VentanaAsistente({ estado, onCambiar }: { estado: EstadoVentana;
   const [sinLeer, setSinLeer] = useState(false);
   const lista = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLTextAreaElement>(null);
+  const campoExcel = useRef<HTMLInputElement>(null);
+  const clip = useRef<HTMLButtonElement>(null);
+  const panelExcelId = useId();
+  const [adjuntoAbierto, setAdjuntoAbierto] = useState(false);
   const docente = u.rol === 'docente';
   const abierta = estado === 'abierta';
   const vistos = useRef(chat.mensajes.length);
@@ -105,8 +109,37 @@ export function VentanaAsistente({ estado, onCambiar }: { estado: EstadoVentana;
         {chat.enviando && <Escribiendo />}
       </div>
 
-      {docente && <ImportarNotas />}
+      {docente && (
+        <ImportarNotas id={panelExcelId} abierto={adjuntoAbierto} campo={campoExcel} onCerrar={() => {
+          setAdjuntoAbierto(false);
+          clip.current?.focus();
+        }} />
+      )}
+      <details style={{ padding: '4px 12px', flexShrink: 0, borderTop: '1px solid var(--au-linea)' }}>
+        <summary style={{ cursor: 'pointer', color: colors.textoMedio, fontSize: font.size.sm }}>Pruebas de seguridad</summary>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 6 }}>
+          <button type="button" disabled={chat.enviando} onClick={() => void chat.enviar('SELECT codigo FROM materias')}>
+            Probar bloqueo de SQL
+          </button>
+          <button type="button" disabled={chat.enviando} onClick={() => void chat.enviar(docente
+            ? 'Publica todas las calificaciones de mis cursos.'
+            : 'Cambia mi calificación a 5.0.')}>
+            {docente ? 'Probar límite de publicación' : 'Probar permisos de estudiante'}
+          </button>
+        </div>
+      </details>
       <form onSubmit={(e) => { e.preventDefault(); void enviar(); }} style={{ padding: '10px 12px 12px', display: 'flex', alignItems: 'flex-end', gap: space[2] }}>
+        {docente && (
+          <button ref={clip} type="button" aria-label="Adjuntar Excel de notas" title="Adjuntar Excel de notas"
+            aria-controls={panelExcelId} aria-expanded={adjuntoAbierto} className="au-chat-accion"
+            onClick={() => {
+              setAdjuntoAbierto(true);
+              campoExcel.current?.click();
+            }}
+            style={{ ...botonCabecera, height: 40, width: 40 }}>
+            <Icono d={icono.adjuntar} tam={22} />
+          </button>
+        )}
         <textarea
           ref={campo}
           aria-label="Mensaje para el asistente"
@@ -169,6 +202,9 @@ function Burbuja({ m, docente, acciones }: { m: MensajeChat; docente: boolean; a
               ? { background: colors.fondoProfundo, color: colors.error, border: `1px solid ${colors.linea}` }
               : { background: colors.blanco, color: colors.texto, border: `1px solid ${colors.linea}`, boxShadow: web.sombraSuave }),
         }}>
+          {m.rechazoSeguridad && (
+            <strong style={{ display: 'block', marginBottom: 4 }}>Bloqueado por seguridad · HTTP 422</strong>
+          )}
           {propio ? m.texto : <TextoFormateado texto={m.texto} />}
         </div>
         {m.accion && docente && <TarjetaAccion accion={m.accion} acciones={acciones} />}

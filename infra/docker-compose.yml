@@ -49,6 +49,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       Jwt__Issuer: unillanos-usuarios
       Jwt__Audience: unillanos-notas
+      Demo__TecnologiasAvanzadas: 'true'
       Jwt__PrivateKeyPath: /keys/jwt-private.pem
     ports:
       - "5001:8080"
@@ -62,6 +63,7 @@ services:
     environment:
       <<: *jwt
       ASPNETCORE_ENVIRONMENT: Development
+      Demo__TecnologiasAvanzadas: 'true'
       Database__UseInMemory: "false"
       Database__AplicarMigraciones: "true"
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=evaluaciones_db;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"

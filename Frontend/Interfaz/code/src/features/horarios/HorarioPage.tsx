@@ -1,4 +1,4 @@
-﻿import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { BloqueHorario } from '@/api/contratos';
 import { useApi, useUsuario } from '@/hooks';
@@ -35,8 +35,7 @@ export function HorarioPage() {
 
   return (
     <section className="au-horario" aria-labelledby="horario-titulo">
-      <h1 id="horario-titulo">Horario semanal</h1>
-      <p className="au-horario-subtitulo">Lunes a sábado · 06:00–18:00 · Hora de Colombia</p>
+      <h1 id="horario-titulo">Horario inscrito</h1>
       {horario.isLoading && <Cargando />}
       {horario.isError && <ErrorEstado error={horario.error} onReintentar={() => void horario.refetch()} />}
       {horario.data && (

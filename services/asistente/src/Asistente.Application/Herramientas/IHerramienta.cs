@@ -52,12 +52,22 @@ internal static class Cursos
         var candidatos = cursos.Select(c => new Candidato(c.Id, c.Nombre, c.Codigo)).ToList();
         if (string.IsNullOrWhiteSpace(consulta))
             return candidatos.Count == 1 ? new(TipoCoincidencia.Unica, candidatos) : new(candidatos.Count == 0 ? TipoCoincidencia.Ninguna : TipoCoincidencia.Varias, candidatos);
-        return ResolutorNombres.Resolver(consulta, candidatos);
+        var resultado = ResolutorNombres.Resolver(consulta, candidatos);
+        if (resultado.Tipo != TipoCoincidencia.Ninguna) return resultado;
+
+        var codigo = ResolutorNombres.Normalizar(consulta);
+        var grupos = candidatos.Where(c => c.Codigo?.StartsWith(codigo + "-", StringComparison.OrdinalIgnoreCase) == true).ToArray();
+        return grupos.Length switch
+        {
+            0 => new(TipoCoincidencia.Ninguna, candidatos),
+            1 => new(TipoCoincidencia.Unica, grupos),
+            _ => new(TipoCoincidencia.Varias, grupos),
+        };
     }
 
     public static Aclaracion Preguntar(string que, ResultadoResolucion r) => new(
         r.Tipo == TipoCoincidencia.Varias
             ? $"Hay varias coincidencias para {que}. Pregunta al usuario cuál quiere."
-            : $"No se encontró {que}. Pregunta al usuario el nombre exacto.",
+            : $"No se encontró {que}. Muestra las opciones disponibles y pide elegir solo si hace falta.",
         r.Candidatos.Select(c => c.Codigo is null ? c.Nombre : $"{c.Nombre} ({c.Codigo})").ToList());
 }
