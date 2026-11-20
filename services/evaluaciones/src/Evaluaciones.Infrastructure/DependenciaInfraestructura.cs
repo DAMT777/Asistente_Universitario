@@ -35,6 +35,7 @@ public static class DependenciaInfraestructura
         servicios.AddScoped<IActividadRepository, ActividadRepository>();
         servicios.AddScoped<ICalificacionRepository, CalificacionRepository>();
         servicios.AddScoped<IPublicacionCorteRepository, PublicacionCorteRepository>();
+        servicios.AddScoped<INotificacionRepository, NotificacionRepository>();
         servicios.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();
         return servicios;
     }

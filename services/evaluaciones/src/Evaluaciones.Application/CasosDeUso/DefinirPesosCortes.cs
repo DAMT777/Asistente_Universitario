@@ -9,7 +9,7 @@ namespace Evaluaciones.Application.CasosDeUso;
 /// CU-02. El profesor dueño del curso (RN-15) define el peso de los tres cortes, que deben sumar 100 (RN-01).
 /// El ponderado se calcula al consultar, así que el cambio se refleja de inmediato en la definitiva.
 /// </summary>
-public sealed class DefinirPesosCortes(ICursoRepository cursos, IUnidadDeTrabajo unidadDeTrabajo)
+public sealed class DefinirPesosCortes(ICursoRepository cursos, IUnidadDeTrabajo unidadDeTrabajo, Notificador notificador)
 {
     public async Task<CursoResumenDto> EjecutarAsync(
         Guid profesorId, Guid cursoId, SolicitudPesosCortes solicitud, CancellationToken ct)
@@ -19,7 +19,10 @@ public sealed class DefinirPesosCortes(ICursoRepository cursos, IUnidadDeTrabajo
         var curso = await cursos.ObtenerCursoParaEditarAsync(cursoId, ct)
             ?? throw new DominioException(CodigosError.NoEncontrado, "El curso no existe.");
 
+        decimal[] antes = [curso.PesoCorte1, curso.PesoCorte2, curso.PesoCorte3];
         curso.DefinirPesos(solicitud.PesoCorte1, solicitud.PesoCorte2, solicitud.PesoCorte3);
+        if (!antes.SequenceEqual([curso.PesoCorte1, curso.PesoCorte2, curso.PesoCorte3]))
+            await notificador.PesosActualizadosAsync(curso, ct);
         await unidadDeTrabajo.GuardarCambiosAsync(ct);
 
         return curso.AResumen();

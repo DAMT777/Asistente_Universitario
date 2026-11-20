@@ -18,7 +18,8 @@ public sealed class PublicarCorte(
     ICalificacionRepository calificaciones,
     IPublicacionCorteRepository publicaciones,
     IUnidadDeTrabajo unidadDeTrabajo,
-    TimeProvider reloj)
+    TimeProvider reloj,
+    Notificador notificador)
 {
     public async Task<ResultadoPublicacionCorte> EjecutarAsync(
         Guid profesorId, Guid cursoId, int corte, SolicitudPublicarCorte solicitud, CancellationToken ct)
@@ -26,7 +27,7 @@ public sealed class PublicarCorte(
         if (!MotorPonderado.EsCorteValido(corte))
             throw new DominioException(CodigosError.ValidacionFallida, "El corte debe ser 1, 2 o 3.");
 
-        await AccesoCurso.ObtenerDelProfesorAsync(cursos, cursoId, profesorId, ct);
+        var curso = await AccesoCurso.ObtenerDelProfesorAsync(cursos, cursoId, profesorId, ct);
 
         var inscritos = (await inscripciones.ListarInscritosAsync(cursoId, ct)).ToDictionary(i => i.EstudianteId);
         var actividadesDelCorte = (await actividades.ListarActividadesAsync(cursoId, ct))
@@ -60,8 +61,15 @@ public sealed class PublicarCorte(
                     actividadesDelCorte, calificacionesPorEstudiante[estudianteId], solicitud.OmitirBorradores);
 
                 if (existentes.TryGetValue(estudianteId, out var existente))
+                {
+                    // Volver a publicar la misma nota no genera un aviso nuevo.
+                    if (existente.Nota != nota)
+                        notificador.NotaDeCortePublicada(curso, corte, estudianteId, nota, corregida: true);
                     existente.Actualizar(nota, ahora);
+                }
                 else
+                {
+                    notificador.NotaDeCortePublicada(curso, corte, estudianteId, nota, corregida: false);
                     publicaciones.AgregarPublicacion(new PublicacionCorte
                     {
                         Id = Guid.NewGuid(),
@@ -71,6 +79,7 @@ public sealed class PublicarCorte(
                         Nota = nota,
                         FechaPublicacion = ahora
                     });
+                }
 
                 publicados.Add(new(estudianteId, nota));
             }

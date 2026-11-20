@@ -7,3 +7,4 @@ export { useCalificaciones, type FilaCalificacion } from './useCalificaciones';
 export { usePonderado } from './usePonderado';
 export { usePendientesDocente, useCrearActividad } from './useDocente';
 export { useAsistente, mensajeDeError, type MensajeChat, type EstadoAccion } from './useAsistente';
+export { useNotificaciones, INTERVALO_NOTIFICACIONES_MS } from './useNotificaciones';

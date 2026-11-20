@@ -10,6 +10,7 @@ public sealed class BaseEnMemoria :
     IActividadRepository,
     ICalificacionRepository,
     IPublicacionCorteRepository,
+    INotificacionRepository,
     IUnidadDeTrabajo
 {
     public List<Curso> Cursos { get; } = [];
@@ -17,6 +18,7 @@ public sealed class BaseEnMemoria :
     public List<Actividad> Actividades { get; } = [];
     public List<Calificacion> Calificaciones { get; } = [];
     public List<PublicacionCorte> Publicaciones { get; } = [];
+    public List<Notificacion> Notificaciones { get; } = [];
 
     public byte[]? VersionExigida { get; private set; }
     public int GuardadosRealizados { get; private set; }
@@ -92,6 +94,21 @@ public sealed class BaseEnMemoria :
     public void AgregarPublicacion(PublicacionCorte publicacion) => Publicaciones.Add(publicacion);
 
     public void ExigirVersion(PublicacionCorte publicacion, byte[] versionEsperada) => VersionExigida = versionEsperada;
+
+    public Task<IReadOnlyList<Notificacion>> ListarDelUsuarioAsync(Guid usuarioId, int maximo, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Notificacion>>(
+            Notificaciones.Where(n => n.UsuarioId == usuarioId).OrderByDescending(n => n.FechaCreacion).Take(maximo).ToList());
+
+    public Task<int> ContarNoLeidasAsync(Guid usuarioId, CancellationToken ct) =>
+        Task.FromResult(Notificaciones.Count(n => n.UsuarioId == usuarioId && !n.Leida));
+
+    public Task<Notificacion?> ObtenerNotificacionAsync(Guid notificacionId, CancellationToken ct) =>
+        Task.FromResult(Notificaciones.FirstOrDefault(n => n.Id == notificacionId));
+
+    public Task<IReadOnlyList<Notificacion>> ListarNoLeidasAsync(Guid usuarioId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Notificacion>>(Notificaciones.Where(n => n.UsuarioId == usuarioId && !n.Leida).ToList());
+
+    public void AgregarNotificacion(Notificacion notificacion) => Notificaciones.Add(notificacion);
 
     public Task GuardarCambiosAsync(CancellationToken ct)
     {

@@ -17,7 +17,8 @@ public sealed class CorregirCorte(
     ICalificacionRepository calificaciones,
     IPublicacionCorteRepository publicaciones,
     IUnidadDeTrabajo unidadDeTrabajo,
-    TimeProvider reloj)
+    TimeProvider reloj,
+    Notificador notificador)
 {
     public async Task<PublicacionCorteDto> EjecutarAsync(
         Guid profesorId,
@@ -31,7 +32,7 @@ public sealed class CorregirCorte(
         if (!MotorPonderado.EsCorteValido(corte))
             throw new DominioException(CodigosError.ValidacionFallida, "El corte debe ser 1, 2 o 3.");
 
-        await AccesoCurso.ObtenerDelProfesorAsync(cursos, cursoId, profesorId, ct);
+        var curso = await AccesoCurso.ObtenerDelProfesorAsync(cursos, cursoId, profesorId, ct);
 
         var publicacion = await publicaciones.ObtenerPublicacionAsync(cursoId, estudianteId, corte, ct)
             ?? throw new DominioException(
@@ -48,6 +49,8 @@ public sealed class CorregirCorte(
         if (versionEsperada is not null)
             publicaciones.ExigirVersion(publicacion, versionEsperada);
 
+        if (publicacion.Nota != nota)
+            notificador.NotaDeCortePublicada(curso, corte, estudianteId, nota, corregida: true);
         publicacion.Actualizar(nota, reloj.GetUtcNow().UtcDateTime);
         await unidadDeTrabajo.GuardarCambiosAsync(ct);
 

@@ -24,6 +24,10 @@ const entregaDto = z.object({ id: z.string(), actividadId: z.string(), estudiant
 // contracts/evaluaciones.yaml (CU-15): solo las PUBLICADAS traen nota; un borrador llega como SIN_CALIFICAR.
 const notasActividadesDto = z.object({ cursoId: z.string(), actividades: z.array(z.object({ actividadId: z.string(), estado: z.enum(['PUBLICADA', 'SIN_CALIFICAR']), nota: z.number().nullable(), retroalimentacion: z.string().nullable() })) });
 const respuestaAsistenteDto = z.object({ conversacionId: z.string(), respuesta: z.string(), accionPendiente: z.object({ id: z.string(), resumen: z.string(), expiraEn: z.string() }).nullable() });
+// contracts/evaluaciones.yaml: /notificaciones.
+const tiposNotificacion = { NUEVA_ACTIVIDAD: 'nueva_actividad', CURSO_ACTUALIZADO: 'curso_actualizado', NOTA_PUBLICADA: 'nota_publicada' } as const;
+const notificacionesDto = z.object({ noLeidas: z.number().int().min(0), notificaciones: z.array(z.object({ id: z.string(), tipo: z.enum(['NUEVA_ACTIVIDAD', 'CURSO_ACTUALIZADO', 'NOTA_PUBLICADA']), titulo: z.string(), mensaje: z.string(), cursoId: z.string(), actividadId: z.string().nullable(), fechaCreacion: z.string(), leida: z.boolean() })) })
+  .transform(b => ({ noLeidas: b.noLeidas, notificaciones: b.notificaciones.map(({ fechaCreacion, tipo, ...n }) => ({ ...n, tipo: tiposNotificacion[tipo], fecha: fechaCreacion })) }));
 const publicacionDto = z.object({ estudianteId: z.string(), corte: z.union([z.literal(1),z.literal(2),z.literal(3)]), nota: z.number(), fechaPublicacion: z.string().optional() });
 
 export function createHttpApi(cfg: HttpConfig): ApiClient {
@@ -158,6 +162,11 @@ export function createHttpApi(cfg: HttpConfig): ApiClient {
         return combinar(undefined,e,id,e.estudianteId);
       },
       descargarArchivo: archivoUrl,
+    },
+    notificaciones: {
+      listar: () => req('GET', '/notificaciones', notificacionesDto),
+      marcarLeida: id => req('POST', `/notificaciones/${encodeURIComponent(id)}/leida`, vacio),
+      async marcarTodasLeidas() { await req('POST', '/notificaciones/leidas', vacio); },
     },
     asistente: {
       notasParaImportar: id => req('GET', `/actividades/${encodeURIComponent(id)}/calificaciones`,

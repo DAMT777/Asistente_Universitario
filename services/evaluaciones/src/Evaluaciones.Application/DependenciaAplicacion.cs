@@ -1,4 +1,5 @@
 using Evaluaciones.Application.CasosDeUso;
+using Evaluaciones.Application.Internos;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Evaluaciones.Application;
@@ -25,6 +26,9 @@ public static class DependenciaAplicacion
         servicios.AddScoped<ObtenerNotasActividades>();
         servicios.AddScoped<ObtenerMatrizNotas>();
         servicios.AddScoped<ObtenerActividadInterna>();
+        // Notificaciones: el notificador las crea dentro de cada caso de uso; el estudiante las consulta.
+        servicios.AddScoped<Notificador>();
+        servicios.AddScoped<GestionarNotificaciones>();
         return servicios;
     }
 }

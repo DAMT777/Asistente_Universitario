@@ -11,6 +11,7 @@ public class EvaluacionesDbContext(DbContextOptions<EvaluacionesDbContext> opcio
     public DbSet<Actividad> Actividades => Set<Actividad>();
     public DbSet<Calificacion> Calificaciones => Set<Calificacion>();
     public DbSet<PublicacionCorte> PublicacionesCorte => Set<PublicacionCorte>();
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -73,6 +74,20 @@ public class EvaluacionesDbContext(DbContextOptions<EvaluacionesDbContext> opcio
             e.Property(x => x.Version).IsRowVersion();
             e.HasOne<Curso>().WithMany().HasForeignKey(x => x.CursoId);
             e.HasIndex(x => new { x.CursoId, x.EstudianteId, x.Corte }).IsUnique();
+        });
+
+        // Sin llave foránea al curso a propósito: el aviso es un registro histórico y no debe impedir borrar datos.
+        modelo.Entity<Notificacion>(e =>
+        {
+            e.ToTable("Notificacion");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Tipo)
+                .HasColumnType("varchar(20)")
+                .HasConversion(v => v.ComoTexto(), v => TipoNotificacionExtensiones.DesdeTexto(v));
+            e.Property(x => x.Titulo).HasMaxLength(Notificacion.LargoMaximoTitulo);
+            e.Property(x => x.Mensaje).HasMaxLength(Notificacion.LargoMaximoMensaje);
+            e.Property(x => x.FechaCreacion).HasColumnType("datetime2").HasConversion(EnUtc.Valor);
+            e.HasIndex(x => new { x.UsuarioId, x.FechaCreacion });
         });
     }
 }

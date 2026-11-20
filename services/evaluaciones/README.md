@@ -17,6 +17,7 @@ ASP.NET Core sobre .NET 10 con EF Core y SQL Server. Puerto local 5002.
 | CU-12 | `GET /cursos` y `GET /cursos/{cursoId}/actividades?soloPendientes=true` | `ListarCursos`, `ListarActividadesDelCurso` |
 | CU-15 | `GET /mis-notas/cursos/{cursoId}/actividades` (estudiante) | `ObtenerNotasActividades` |
 | CU-16 | `GET /mis-notas` (estudiante) | `ObtenerMatrizNotas` |
+| — | `GET /notificaciones`, `POST /notificaciones/{id}/leida`, `POST /notificaciones/leidas` (usuario del token) | `GestionarNotificaciones` |
 
 CU-02 y CU-03 vienen de la rama `Angy`. Los pesos de los tres cortes deben sumar 100, cada uno entre 0 y 100 con dos decimales como máximo (422 `PESOS_CORTE_INVALIDOS`). Una actividad necesita título, corte 1 a 3 y un peso mayor que 0; las del mismo corte no pueden pasar de 100 (422 `PESOS_ACTIVIDAD_EXCEDIDOS`). Si requiere entrega, la fecha límite es obligatoria, y una fecha nueva debe ser futura (al editar se puede conservar la que ya tenía). El ponderado se calcula al consultar, así que un cambio de pesos se refleja de inmediato.
 
@@ -27,6 +28,20 @@ CU-15 y CU-16 siguen `contracts/evaluaciones.yaml`: solo se leen calificaciones 
 Consulta interna para el servicio de entregas: `GET /internal/actividades/{actividadId}?estudianteId=` con el encabezado `X-Service-Key` (variable `ServiceKey`). Devuelve curso, profesor dueño, fecha límite (puede ser `null`), si requiere entrega y si el estudiante está inscrito. Sin llave configurada rechaza todo, y el gateway bloquea `/internal/**` desde fuera.
 
 Lecturas de apoyo que la pantalla del profesor necesita: `GET /cursos/{cursoId}/estudiantes` y `GET /actividades/{actividadId}/calificaciones`.
+
+## Notificaciones
+
+El estudiante recibe un aviso en la campana del frontend cuando el profesor:
+
+| Acción del profesor | Tipo | Quién lo recibe |
+|---|---|---|
+| Crea una actividad (CU-03) | `NUEVA_ACTIVIDAD` | Todos los inscritos |
+| Cambia título, fecha, corte, peso o entrega de una actividad (CU-03) | `CURSO_ACTUALIZADO` | Todos los inscritos (si cambió algo) |
+| Cambia los pesos de los cortes (CU-02) | `CURSO_ACTUALIZADO` | Todos los inscritos (si cambió algo) |
+| Publica las notas de una actividad (CU-08) | `NOTA_PUBLICADA` | Cada estudiante con nota recién publicada |
+| Publica o corrige un corte (CU-10, CU-11) | `NOTA_PUBLICADA` | El estudiante, si su nota es nueva o cambió |
+
+Calificar en borrador (CU-05 a CU-07) no avisa: el estudiante no ve borradores (RN-09). `Notificador` agrega los avisos en la misma unidad de trabajo que el cambio, así que se guardan juntos o no se guarda ninguno. La tabla `Notificacion` sale de la migración `Notificaciones`.
 
 ## Estructura
 

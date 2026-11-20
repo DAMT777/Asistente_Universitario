@@ -1,8 +1,8 @@
-import type { Calificacion, PublicacionCorte, Sesion, Usuario } from '@/types';
+import type { Actividad, Calificacion, Notificacion, PublicacionCorte, Sesion, Usuario } from '@/types';
 import { resumenCurso, redondear1, validarPesos, puedeEntregar } from '@/domain';
 import { seleccionEntregaSchema, actividadInputSchema } from '@/schemas';
 import { ApiError, type AccionPendiente, type ApiClient } from '../contratos';
-import { ACTIVIDADES, CURSOS, DOCENTE, ESTUDIANTES, calificacionesIniciales } from './seed';
+import { ACTIVIDADES, CURSOS, DOCENTE, ESTUDIANTES, calificacionesIniciales, notificacionesIniciales, type NotificacionSemilla } from './seed';
 
 export interface MockConfig {
   hoy: () => string;
@@ -16,12 +16,39 @@ export function createMockApi(cfg: MockConfig): ApiClient {
     actividades: structuredClone(ACTIVIDADES),
     califs: calificacionesIniciales(),
     publicaciones: [] as PublicacionCorte[],
+    notificaciones: notificacionesIniciales() as NotificacionSemilla[],
   };
   let usuario: Usuario | null = null;
   /** Contenido de los archivos entregados en la demostración, por id de archivo. */
   const contenidos = new Map<string, Blob>();
   const espera = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(structuredClone(v)), cfg.latenciaMs ?? 250));
   const buscar = (a: string, e: string) => db.califs.find((c) => c.actividadId === a && c.estudianteId === e);
+  /**
+   * Avisos como los del servicio de evaluaciones: se generan cuando el docente crea o cambia algo del curso o
+   * publica una nota. En la demostración todos los estudiantes están inscritos en todos los cursos.
+   */
+  let secuenciaAvisos = 0;
+  const avisar = (usuarios: string[], aviso: Omit<Notificacion, 'id' | 'fecha' | 'leida'>) => {
+    const fecha = new Date().toISOString();
+    for (const u of usuarios) db.notificaciones.unshift({ ...aviso, id: `aviso-${++secuenciaAvisos}`, usuarioId: u, fecha, leida: false });
+  };
+  const inscritos = () => ESTUDIANTES.map(e => e.id);
+  const nombreCurso = (cursoId: string) => db.cursos.find(c => c.id === cursoId)?.nombre ?? 'Tu curso';
+  const fechaAviso = (iso: string) => new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso)).replace(',', '');
+  const avisarNotaActividad = (c: Calificacion) => {
+    const a = db.actividades.find(x => x.id === c.actividadId);
+    if (!a || c.nota === null) return;
+    avisar([c.estudianteId], { tipo: 'nota_publicada', titulo: `Nota publicada: ${a.titulo}`, mensaje: `${nombreCurso(a.cursoId)}: tu nota en «${a.titulo}» es ${c.nota.toFixed(1)}.${c.retro ? ' Tiene retroalimentación del profesor.' : ''}`, cursoId: a.cursoId, actividadId: a.id });
+  };
+  const avisarCambiosActividad = (antes: Actividad, despues: Actividad) => {
+    const cambios: string[] = [];
+    if (antes.titulo !== despues.titulo) cambios.push(`ahora se llama «${despues.titulo}»`);
+    if (antes.vence !== despues.vence) cambios.push(despues.vence ? `nueva fecha límite: ${fechaAviso(despues.vence)}` : 'ya no tiene fecha límite');
+    if (antes.corte !== despues.corte) cambios.push(`pasó al corte ${despues.corte}`);
+    if (antes.peso !== despues.peso) cambios.push(`ahora pesa ${despues.peso}% del corte`);
+    if (antes.requiereEntrega !== despues.requiereEntrega) cambios.push(despues.requiereEntrega ? 'ahora requiere entrega' : 'ya no requiere entrega');
+    if (cambios.length) avisar(inscritos(), { tipo: 'curso_actualizado', titulo: `Cambios en ${despues.titulo}`, mensaje: `${nombreCurso(despues.cursoId)}: «${antes.titulo}» ${cambios.join(', ')}.`, cursoId: despues.cursoId, actividadId: despues.id });
+  };
   const exigirDocente = () => {
     if (usuario?.rol !== 'docente') throw new ApiError(403, 'Solo el docente puede hacer esto.');
   };
@@ -100,6 +127,7 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         const existente = db.publicaciones.find(p => p.cursoId === cursoId && p.estudianteId === estudianteId && p.corte === corte);
         if (!!existente !== corregir) throw new ApiError(409, 'La publicación cambió. Actualiza la información e intenta de nuevo.');
         const nueva = { cursoId, estudianteId, corte, nota: redondear1(nota), fechaPublicacion: cfg.hoy() };
+        if (!existente || existente.nota !== nueva.nota) avisar([estudianteId], { tipo: 'nota_publicada', titulo: `Nota del corte ${corte} ${existente ? 'corregida' : 'publicada'}`, mensaje: `${curso.nombre}: tu nota del corte ${corte} es ${nueva.nota.toFixed(1)}.`, cursoId, actividadId: null });
         if (existente) Object.assign(existente, nueva); else db.publicaciones.push(nueva);
         return espera(nueva);
       },
@@ -135,8 +163,13 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         const propias = db.actividades.filter(a => a.cursoId === cursoId);
         if (Object.keys(actividades).some(id => !propias.some(a => a.id === id))) throw new ApiError(422, 'La actividad no pertenece al curso.');
         for (const corte of [1, 2, 3]) if (!validarPesos(propias.filter(a => a.corte === corte).map(a => actividades[a.id] ?? a.peso), false).ok) throw new ApiError(422, 'Los pesos de actividades no pueden superar 100%.');
+        if (cortes.some((p, i) => p !== c.pesos[i])) avisar(inscritos(), { tipo: 'curso_actualizado', titulo: `Nuevos pesos en ${c.nombre}`, mensaje: `${c.nombre}: los cortes ahora pesan ${cortes[0]}%, ${cortes[1]}% y ${cortes[2]}%.`, cursoId, actividadId: null });
         c.pesos = cortes;
-        for (const a of db.actividades) if (a.cursoId === cursoId && actividades[a.id] != null) a.peso = actividades[a.id];
+        for (const a of db.actividades) if (a.cursoId === cursoId && actividades[a.id] != null && actividades[a.id] !== a.peso) {
+          const antes = { ...a };
+          a.peso = actividades[a.id];
+          avisarCambiosActividad(antes, a);
+        }
         return espera(undefined);
       },
     },
@@ -150,7 +183,9 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         const valor = actividadInputSchema(input.vence || cfg.hoy()).parse(input);
         const total = db.actividades.filter(x => x.id !== id && x.cursoId === input.cursoId && x.corte === input.corte).reduce((n,x) => n + x.peso, 0);
         if (total + valor.peso > 100) throw new ApiError(422, 'El corte no puede superar 100%.');
+        const antes = { ...a };
         Object.assign(a, valor);
+        avisarCambiosActividad(antes, a);
         return espera(a);
       },
       async crear(input) {
@@ -159,6 +194,8 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         actividadInputSchema(cfg.hoy()).parse(input);
         const a = { ...input, id: `n${Date.now()}` };
         db.actividades.push(a);
+        const plazo = a.vence ? `. ${a.requiereEntrega ? 'Entrega hasta el' : 'Fecha:'} ${fechaAviso(a.vence)}` : '';
+        avisar(inscritos(), { tipo: 'nueva_actividad', titulo: `Nueva actividad: ${a.titulo}`, mensaje: `${nombreCurso(a.cursoId)}: ${DOCENTE.nombre} agregó «${a.titulo}». Corte ${a.corte}, ${a.peso}% del corte${plazo}.`, cursoId: a.cursoId, actividadId: a.id });
         return espera(a);
       },
     },
@@ -195,12 +232,13 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         const texto = retro.trim();
         if (!publicar && c.estado && c.nota === nota && c.retro === texto) return espera(c);
         Object.assign(c, { nota, retro: texto, estado: publicar ? 'publicada' : 'borrador' } satisfies Partial<Calificacion>);
+        if (publicar) avisarNotaActividad(c);
         return espera(c);
       },
       async publicarBorradores(actividadId) {
         exigirDocente();
         let n = 0;
-        for (const c of db.califs) if (c.actividadId === actividadId && c.estado === 'borrador') { c.estado = 'publicada'; n++; }
+        for (const c of db.califs) if (c.actividadId === actividadId && c.estado === 'borrador') { c.estado = 'publicada'; n++; avisarNotaActividad(c); }
         return espera(n);
       },
       async anularEntrega(actividadId) {
@@ -233,6 +271,24 @@ export function createMockApi(cfg: MockConfig): ApiClient {
         c.entregado = cfg.hoy();
         c.archivo = archivos.map(a => a.nombre).join(', ');
         return espera(c);
+      },
+    },
+    notificaciones: {
+      async listar() {
+        if (!usuario) throw new ApiError(401, 'Inicia sesión.', 'NO_AUTENTICADO');
+        const mias = db.notificaciones.filter(n => n.usuarioId === usuario!.id).sort((a, b) => Date.parse(b.fecha) - Date.parse(a.fecha));
+        return espera({ noLeidas: mias.filter(n => !n.leida).length, notificaciones: mias.slice(0, 50).map(n => ({ id: n.id, tipo: n.tipo, titulo: n.titulo, mensaje: n.mensaje, cursoId: n.cursoId, actividadId: n.actividadId, fecha: n.fecha, leida: n.leida })) });
+      },
+      async marcarLeida(id) {
+        const n = db.notificaciones.find(x => x.id === id);
+        if (!usuario || !n || n.usuarioId !== usuario.id) throw new ApiError(404, 'La notificación no existe.', 'NO_ENCONTRADO');
+        n.leida = true;
+        return espera(undefined);
+      },
+      async marcarTodasLeidas() {
+        if (!usuario) throw new ApiError(401, 'Inicia sesión.', 'NO_AUTENTICADO');
+        for (const n of db.notificaciones) if (n.usuarioId === usuario.id) n.leida = true;
+        return espera(undefined);
       },
     },
     asistente: {
