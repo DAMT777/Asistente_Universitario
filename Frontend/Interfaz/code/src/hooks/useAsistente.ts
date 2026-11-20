@@ -18,6 +18,13 @@ export interface MensajeChat {
 }
 
 const MAX_MENSAJES = 60;
+
+/** crypto.randomUUID solo existe en contextos seguros (HTTPS o localhost); por HTTP con IP hay que usar un respaldo. */
+function idUnico(): string {
+  const c = globalThis.crypto;
+  if (typeof c?.randomUUID === 'function') return c.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 const clave = (usuarioId: string) => `aula.asistente.${usuarioId}`;
 
 function leer(usuarioId: string): { conversacionId?: string; mensajes: MensajeChat[] } {
@@ -61,7 +68,7 @@ export function useAsistente() {
   }, [usuario.id, conversacionId, mensajes]);
 
   const agregar = (m: Omit<MensajeChat, 'id' | 'fecha'>) =>
-    setMensajes(ms => [...ms, { ...m, id: crypto.randomUUID(), fecha: new Date().toISOString() }]);
+    setMensajes(ms => [...ms, { ...m, id: idUnico(), fecha: new Date().toISOString() }]);
 
   const actualizarAccion = (accionId: string, cambios: Partial<NonNullable<MensajeChat['accion']>>) =>
     setMensajes(ms => ms.map(m => m.accion?.id === accionId ? { ...m, accion: { ...m.accion, ...cambios } } : m));

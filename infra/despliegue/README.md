@@ -5,7 +5,7 @@ SQL Server, Azurite y los servicios no se publican. Todo corre en una sola insta
 
 ## Requisitos de AWS
 
-- Instancia **t3.small** (2 GB de RAM) como mínimo: SQL Server no corre bien con 1 GB. Confirme en su consola qué cubre el plan gratuito vigente.
+- Instancia con **4 GiB de RAM** como mínimo (por ejemplo `t3.medium` o `c7i-flex.large`). SQL Server se niega a iniciar con menos de 2000 MB visibles, y una instancia de 2 GiB deja unos 1900 MB. Confirme en su consola qué tipos cubre el plan gratuito vigente.
 - Ubuntu 24.04, disco gp3 de 30 GB, Elastic IP.
 - Security Group: 22 (solo su IP), 80 y 443. **No abra** 1433 ni 5000–5005.
 
