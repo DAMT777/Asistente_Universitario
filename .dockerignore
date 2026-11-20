@@ -3,7 +3,9 @@
 **/TestResults/
 **/node_modules/
 .git/
-Frontend/
+Frontend/Interfaz/code/dist/
+**/.vite/
 infra/keys/
 infra/.env
+infra/despliegue/.env
 **/*.user

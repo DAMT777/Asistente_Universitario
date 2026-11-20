@@ -1,0 +1,15 @@
+# Único punto de entrada público. Sirve el frontend y reenvía /api/* al gateway (sin el prefijo /api).
+# SITE_ADDRESS=":80" -> HTTP por IP. SITE_ADDRESS="notas.midominio.com" -> HTTPS automático (Let's Encrypt).
+{$SITE_ADDRESS::80} {
+	encode gzip
+
+	handle_path /api/* {
+		reverse_proxy gateway:8080
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

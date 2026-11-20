@@ -1,0 +1,184 @@
+# Despliegue en una sola instancia EC2. Desde la raíz del repositorio:
+#   docker compose -f infra/despliegue/docker-compose.aws.yml up --build -d
+# Solo el contenedor "web" publica puertos (80 y 443). SQL Server, Azurite y los servicios quedan en la red interna.
+# Se mantiene ASPNETCORE_ENVIRONMENT=Development porque los usuarios de prueba y la base de usuarios en memoria solo existen así.
+name: unillanos-notas-aws
+
+x-jwt: &jwt
+  Jwt__Issuer: unillanos-usuarios
+  Jwt__Audience: unillanos-notas
+  Jwt__PublicKeyPath: /keys/jwt-public.pem
+
+x-comun: &comun
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  web:
+    <<: *comun
+    build:
+      context: ../..
+      dockerfile: infra/despliegue/web.Dockerfile
+      args:
+        PUBLIC_URL: ${PUBLIC_URL:?Defina PUBLIC_URL en infra/despliegue/.env}
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddydata:/data
+    depends_on:
+      - gateway
+
+  sqlserver:
+    <<: *comun
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:?Defina SQL_SA_PASSWORD en infra/despliegue/.env}
+      MSSQL_MEMORY_LIMIT_MB: ${SQL_MEMORY_MB:-1024}
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  azurite:
+    <<: *comun
+    image: mcr.microsoft.com/azure-storage/azurite
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --location /data --skipApiVersionCheck
+    volumes:
+      - azuritedata:/data
+
+  usuarios:
+    <<: *comun
+    build:
+      context: ../..
+      dockerfile: services/usuarios/Dockerfile
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Issuer: unillanos-usuarios
+      Jwt__Audience: unillanos-notas
+      Demo__TecnologiasAvanzadas: 'true'
+      Jwt__PrivateKeyPath: /keys/jwt-private.pem
+    volumes:
+      - ../keys:/keys:ro
+
+  evaluaciones:
+    <<: *comun
+    build:
+      context: ../..
+      dockerfile: services/evaluaciones/Dockerfile
+    environment:
+      <<: *jwt
+      ASPNETCORE_ENVIRONMENT: Development
+      Demo__TecnologiasAvanzadas: 'true'
+      Database__UseInMemory: "false"
+      Database__AplicarMigraciones: "true"
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=evaluaciones_db;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      ServiceKey: ${SERVICE_KEY:?Defina SERVICE_KEY en infra/despliegue/.env}
+    volumes:
+      - ../keys/jwt-public.pem:/keys/jwt-public.pem:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  entregas:
+    <<: *comun
+    build:
+      context: ../..
+      dockerfile: services/entregas/Dockerfile
+    environment:
+      <<: *jwt
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=entregas_db;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      ServiceKey: ${SERVICE_KEY:?Defina SERVICE_KEY en infra/despliegue/.env}
+      Services__EvaluacionesBaseUrl: http://evaluaciones:8080
+      Services__EvaluacionesTimeoutSegundos: "3"
+      Storage__ConnectionString: "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://azurite"
+      Storage__Container: entregas
+      Entregas__MaxBytes: "20971520"
+      Entregas__MaxBytesTotal: "52428800"
+      Entregas__MaxArchivos: "10"
+      Database__AplicarMigraciones: "true"
+    volumes:
+      - ../keys/jwt-public.pem:/keys/jwt-public.pem:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+      evaluaciones:
+        condition: service_started
+
+  horarios:
+    <<: *comun
+    build:
+      context: ../..
+      dockerfile: services/horarios/Dockerfile
+    environment:
+      <<: *jwt
+      ASPNETCORE_ENVIRONMENT: Development
+      Evaluaciones__BaseUrl: http://evaluaciones:8080/
+    volumes:
+      - ../keys/jwt-public.pem:/keys/jwt-public.pem:ro
+    depends_on:
+      - evaluaciones
+
+  asistente:
+    <<: *comun
+    build:
+      context: ../..
+      dockerfile: services/asistente/Dockerfile
+    environment:
+      <<: *jwt
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=asistente_db;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      Database__AplicarMigraciones: "true"
+      Services__GatewayBaseUrl: http://gateway:8080
+      Llm__BaseUrl: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
+      Llm__ApiKey: ${LLM_API_KEY:-}
+      Llm__Model: ${LLM_MODEL:-openai/gpt-oss-20b}
+      Llm__TimeoutSeconds: "15"
+      Asistente__ExpiracionAccionMinutos: "5"
+      Asistente__MaxLlamadasHerramientas: "5"
+      Asistente__MensajesPorMinuto: "10"
+    volumes:
+      - ../keys/jwt-public.pem:/keys/jwt-public.pem:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  # Sin CORS en la práctica: el navegador llama a /api en el mismo origen que el frontend.
+  gateway:
+    <<: *comun
+    build:
+      context: ../..
+      dockerfile: services/gateway/Dockerfile
+    environment:
+      <<: *jwt
+      Cors__AllowedOrigins__0: ${PUBLIC_URL}
+      ReverseProxy__Clusters__usuarios__Destinations__principal__Address: http://usuarios:8080/
+      ReverseProxy__Clusters__evaluaciones__Destinations__principal__Address: http://evaluaciones:8080/
+      ReverseProxy__Clusters__entregas__Destinations__principal__Address: http://entregas:8080/
+      ReverseProxy__Clusters__horarios__Destinations__principal__Address: http://horarios:8080/
+      ReverseProxy__Clusters__asistente__Destinations__principal__Address: http://asistente:8080/
+    volumes:
+      - ../keys/jwt-public.pem:/keys/jwt-public.pem:ro
+    depends_on:
+      - usuarios
+      - evaluaciones
+      - entregas
+      - horarios
+
+volumes:
+  sqldata:
+  azuritedata:
+  caddydata:
