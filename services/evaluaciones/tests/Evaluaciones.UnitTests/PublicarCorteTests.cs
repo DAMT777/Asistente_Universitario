@@ -10,7 +10,7 @@ namespace Evaluaciones.UnitTests;
 public class PublicarCorteTests
 {
     private static PublicarCorte CrearCasoDeUso(Escenario e) =>
-        new(e.Base, e.Base, e.Base, e.Base, e.Base, e.Base, e.Reloj);
+        new(e.Base, e.Base, e.Base, e.Base, e.Base, e.Base, e.Reloj, e.Notificador);
 
     [Fact]
     public async Task Publica_a_Ana_con_nota_3_2_y_rechaza_a_Luis_y_a_Marta()

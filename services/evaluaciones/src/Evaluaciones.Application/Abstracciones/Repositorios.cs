@@ -67,6 +67,22 @@ public interface IPublicacionCorteRepository
     void ExigirVersion(PublicacionCorte publicacion, byte[] versionEsperada);
 }
 
+public interface INotificacionRepository
+{
+    /// <summary>Las más recientes primero, como máximo <paramref name="maximo"/>.</summary>
+    Task<IReadOnlyList<Notificacion>> ListarDelUsuarioAsync(Guid usuarioId, int maximo, CancellationToken ct);
+
+    Task<int> ContarNoLeidasAsync(Guid usuarioId, CancellationToken ct);
+
+    /// <summary>Con seguimiento, para marcarla como leída.</summary>
+    Task<Notificacion?> ObtenerNotificacionAsync(Guid notificacionId, CancellationToken ct);
+
+    /// <summary>Con seguimiento, para marcarlas como leídas.</summary>
+    Task<IReadOnlyList<Notificacion>> ListarNoLeidasAsync(Guid usuarioId, CancellationToken ct);
+
+    void AgregarNotificacion(Notificacion notificacion);
+}
+
 public interface IUnidadDeTrabajo
 {
     /// <exception cref="Evaluaciones.Domain.Errores.DominioException">CONFLICTO_CONCURRENCIA si otro cambio modificó el registro.</exception>

@@ -100,6 +100,27 @@ internal sealed class PublicacionCorteRepository(EvaluacionesDbContext db) : IPu
         db.Entry(publicacion).Property(p => p.Version).OriginalValue = versionEsperada;
 }
 
+internal sealed class NotificacionRepository(EvaluacionesDbContext db) : INotificacionRepository
+{
+    public async Task<IReadOnlyList<Notificacion>> ListarDelUsuarioAsync(Guid usuarioId, int maximo, CancellationToken ct) =>
+        await db.Notificaciones.AsNoTracking()
+            .Where(n => n.UsuarioId == usuarioId)
+            .OrderByDescending(n => n.FechaCreacion)
+            .Take(maximo)
+            .ToListAsync(ct);
+
+    public Task<int> ContarNoLeidasAsync(Guid usuarioId, CancellationToken ct) =>
+        db.Notificaciones.CountAsync(n => n.UsuarioId == usuarioId && !n.Leida, ct);
+
+    public Task<Notificacion?> ObtenerNotificacionAsync(Guid notificacionId, CancellationToken ct) =>
+        db.Notificaciones.FirstOrDefaultAsync(n => n.Id == notificacionId, ct);
+
+    public async Task<IReadOnlyList<Notificacion>> ListarNoLeidasAsync(Guid usuarioId, CancellationToken ct) =>
+        await db.Notificaciones.Where(n => n.UsuarioId == usuarioId && !n.Leida).ToListAsync(ct);
+
+    public void AgregarNotificacion(Notificacion notificacion) => db.Notificaciones.Add(notificacion);
+}
+
 internal sealed class UnidadDeTrabajo(EvaluacionesDbContext db) : IUnidadDeTrabajo
 {
     public async Task GuardarCambiosAsync(CancellationToken ct)

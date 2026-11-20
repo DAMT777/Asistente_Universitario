@@ -10,12 +10,14 @@ namespace Evaluaciones.Application.CasosDeUso;
 /// CU-03. El profesor dueño del curso (RN-15) crea o edita una actividad con corte, peso, fecha límite y si
 /// requiere entrega. Reglas: RN-02 (peso mayor que 0 y el corte no pasa de 100), RN-04 y RN-05 (con entrega
 /// necesita fecha límite). Una fecha límite nueva debe ser posterior a la hora actual.
+/// Los inscritos reciben una notificación al crearla y cuando cambia algo que ven.
 /// </summary>
 public sealed class GestionarActividad(
     ICursoRepository cursos,
     IActividadRepository actividades,
     IUnidadDeTrabajo unidadDeTrabajo,
-    TimeProvider reloj)
+    TimeProvider reloj,
+    Notificador notificador)
 {
     public async Task<ActividadDto> CrearAsync(
         Guid profesorId, Guid cursoId, SolicitudActividad solicitud, CancellationToken ct)
@@ -24,13 +26,14 @@ public sealed class GestionarActividad(
         var ahora = reloj.GetUtcNow().UtcDateTime;
         ExigirFechaFutura(datos.FechaLimite, ahora);
 
-        await AccesoCurso.ObtenerDelProfesorAsync(cursos, cursoId, profesorId, ct);
+        var curso = await AccesoCurso.ObtenerDelProfesorAsync(cursos, cursoId, profesorId, ct);
 
         var delCorte = (await actividades.ListarActividadesAsync(cursoId, ct)).Where(a => a.Corte == datos.Corte);
         Actividad.ValidarPesoDisponible(datos.Corte, datos.Peso, delCorte);
 
         var actividad = Actividad.Nueva(cursoId, datos);
         actividades.AgregarActividad(actividad);
+        await notificador.NuevaActividadAsync(curso, actividad, ct);
         await unidadDeTrabajo.GuardarCambiosAsync(ct);
 
         return actividad.ADto(ahora);
@@ -45,7 +48,7 @@ public sealed class GestionarActividad(
         var actividad = await actividades.ObtenerActividadParaEditarAsync(actividadId, ct)
             ?? throw new DominioException(CodigosError.NoEncontrado, "La actividad no existe.");
 
-        await AccesoCurso.ObtenerDelProfesorAsync(cursos, actividad.CursoId, profesorId, ct);
+        var curso = await AccesoCurso.ObtenerDelProfesorAsync(cursos, actividad.CursoId, profesorId, ct);
 
         // Conservar la fecha que ya tenía es válido aunque haya pasado; cambiarla exige una fecha futura.
         // Se compara al minuto porque el formulario no maneja segundos.
@@ -56,7 +59,10 @@ public sealed class GestionarActividad(
             .Where(a => a.Corte == datos.Corte && a.Id != actividad.Id);
         Actividad.ValidarPesoDisponible(datos.Corte, datos.Peso, otrasDelCorte);
 
+        var antes = new DatosActividad(
+            actividad.Titulo, actividad.Corte, actividad.Peso, actividad.FechaLimite, actividad.RequiereEntrega);
         actividad.Editar(datos);
+        await notificador.ActividadActualizadaAsync(curso, antes, actividad, ct);
         await unidadDeTrabajo.GuardarCambiosAsync(ct);
 
         return actividad.ADto(ahora);

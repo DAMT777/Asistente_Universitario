@@ -203,6 +203,11 @@ export const icono = {
   minimizar: 'M6 12h12',
   menu: 'M4 7h16M4 12h16M4 17h16',
   reiniciar: 'M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5',
+  campana: 'M6 9a6 6 0 0 1 12 0c0 6.5 2.5 8 2.5 8h-17S6 15.5 6 9zM10 20.5a2.2 2.2 0 0 0 4 0',
+  tarea: 'M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM8 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2M12 10v6M9 13h6',
+  editar: 'M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4',
+  nota: 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z',
+  revisado: 'M5 12.5 9.5 17 19 7.5',
 } as const;
 
 export function Icono({ d, tam = 20 }: { d: string; tam?: number }) {

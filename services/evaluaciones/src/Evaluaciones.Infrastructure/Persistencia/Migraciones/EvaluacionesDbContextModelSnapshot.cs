@@ -166,6 +166,48 @@ namespace Evaluaciones.Infrastructure.Persistencia.Migraciones
                     b.ToTable("CursoEstudiante", (string)null);
                 });
 
+            modelBuilder.Entity("Evaluaciones.Domain.Entidades.Notificacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActividadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CursoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Leida")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Mensaje")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "FechaCreacion");
+
+                    b.ToTable("Notificacion", (string)null);
+                });
+
             modelBuilder.Entity("Evaluaciones.Domain.Entidades.PublicacionCorte", b =>
                 {
                     b.Property<Guid>("Id")

@@ -108,3 +108,26 @@ export interface ArchivoEntrega {
   /** Blob en web, { uri } en React Native. El adaptador de api decide cómo subirlo. */
   datos?: unknown;
 }
+
+/** Motivo de la notificación: actividad nueva, cambio en el curso o nota publicada. */
+export type TipoNotificacion = 'nueva_actividad' | 'curso_actualizado' | 'nota_publicada';
+
+export interface Notificacion {
+  id: string;
+  tipo: TipoNotificacion;
+  titulo: string;
+  mensaje: string;
+  cursoId: string;
+  /** Actividad relacionada, si la hay (para abrirla desde el aviso). */
+  actividadId: string | null;
+  /** ISO 8601. */
+  fecha: string;
+  leida: boolean;
+}
+
+export interface BandejaNotificaciones {
+  /** Total sin leer, aunque no todas vengan en la lista. */
+  noLeidas: number;
+  /** Las más recientes primero. */
+  notificaciones: Notificacion[];
+}

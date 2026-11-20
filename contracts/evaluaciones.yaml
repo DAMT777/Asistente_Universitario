@@ -14,6 +14,8 @@ security:
 tags:
   - name: MisNotas
     description: "Solo calificaciones PUBLICADAS. Un borrador o una actividad sin calificar se muestran como SIN_CALIFICAR con nota null; sin calificar no es 0."
+  - name: Notificaciones
+    description: Avisos del usuario sobre sus cursos.
   - name: Interno
     description: "Servicio a servicio. Requiere X-Service-Key y el API Gateway bloquea /internal/**."
   - name: Salud
@@ -115,6 +117,64 @@ paths:
           $ref: "#/components/responses/SinPermiso"
         "404":
           $ref: "#/components/responses/NoEncontrado"
+  /notificaciones:
+    get:
+      operationId: listarNotificaciones
+      summary: "Notificaciones del usuario del token: las 50 más recientes y el total sin leer."
+      description: "El estudiante recibe una al crear el profesor una actividad (NUEVA_ACTIVIDAD), al cambiar una actividad o los pesos de los cortes (CURSO_ACTUALIZADO) y al publicarse una nota de actividad o de corte (NOTA_PUBLICADA). Un borrador nunca genera aviso (RN-09)."
+      tags: [Notificaciones]
+      responses:
+        "200":
+          description: Notificaciones, las más recientes primero.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notificaciones"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+  /notificaciones/{notificacionId}/leida:
+    post:
+      operationId: marcarNotificacionLeida
+      summary: Marca como leída una notificación propia. Repetirlo no cambia nada.
+      tags: [Notificaciones]
+      parameters:
+        - name: notificacionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Marcada como leída.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "404":
+          description: "NO_ENCONTRADO. No existe o es de otro usuario (no se revela cuál de los dos)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /notificaciones/leidas:
+    post:
+      operationId: marcarTodasLeidas
+      summary: Marca como leídas todas las notificaciones del usuario.
+      tags: [Notificaciones]
+      responses:
+        "200":
+          description: Cuántas estaban sin leer.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [marcadas]
+                properties:
+                  marcadas:
+                    type: integer
+                    minimum: 0
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
   /internal/actividades/{actividadId}:
     get:
       operationId: obtenerActividadInterna
@@ -299,6 +359,47 @@ components:
         requiereEntrega:
           type: boolean
         estudianteInscrito:
+          type: boolean
+    Notificaciones:
+      type: object
+      additionalProperties: false
+      required: [noLeidas, notificaciones]
+      properties:
+        noLeidas:
+          type: integer
+          minimum: 0
+        notificaciones:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/Notificacion"
+    Notificacion:
+      type: object
+      additionalProperties: false
+      required: [id, tipo, titulo, mensaje, cursoId, actividadId, fechaCreacion, leida]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum: [NUEVA_ACTIVIDAD, CURSO_ACTUALIZADO, NOTA_PUBLICADA]
+        titulo:
+          type: string
+          maxLength: 150
+        mensaje:
+          type: string
+          maxLength: 500
+        cursoId:
+          type: string
+          format: uuid
+        actividadId:
+          type: [string, "null"]
+          format: uuid
+        fechaCreacion:
+          type: string
+          format: date-time
+        leida:
           type: boolean
     Error:
       type: object

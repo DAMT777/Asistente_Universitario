@@ -10,7 +10,7 @@ namespace Evaluaciones.UnitTests;
 public class CorregirCorteTests
 {
     private static CorregirCorte CrearCasoDeUso(Escenario e) =>
-        new(e.Base, e.Base, e.Base, e.Base, e.Base, e.Reloj);
+        new(e.Base, e.Base, e.Base, e.Base, e.Base, e.Reloj, e.Notificador);
 
     private static Task<PublicacionCorteDto> Corregir(
         Escenario e, Guid estudianteId, int corte = 1, bool omitirBorradores = false,

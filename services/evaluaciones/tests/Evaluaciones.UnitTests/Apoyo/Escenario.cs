@@ -1,3 +1,4 @@
+using Evaluaciones.Application.Internos;
 using Evaluaciones.Domain.Entidades;
 
 namespace Evaluaciones.UnitTests.Apoyo;
@@ -22,6 +23,9 @@ public sealed class Escenario
 
     public BaseEnMemoria Base { get; } = new();
     public RelojFijo Reloj { get; } = new(Ahora);
+
+    /// <summary>Notificador sobre la misma base en memoria, para los casos de uso que avisan a los estudiantes.</summary>
+    public Notificador Notificador => new(Base, Base, Reloj);
 
     /// <param name="anaConCorte1Publicado">En la semilla de la guía, Ana ya tiene el corte 1 publicado con 3.2.</param>
     public Escenario(bool anaConCorte1Publicado = true)

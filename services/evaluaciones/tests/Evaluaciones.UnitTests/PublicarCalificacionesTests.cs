@@ -8,7 +8,7 @@ namespace Evaluaciones.UnitTests;
 /// <summary>CU-08 y lo que ve el estudiante después (CU-15, CU-16). Escenario E-08 de la guía.</summary>
 public class PublicarCalificacionesTests
 {
-    private static PublicarCalificacionesDeActividad Publicar(Escenario e) => new(e.Base, e.Base, e.Base, e.Base);
+    private static PublicarCalificacionesDeActividad Publicar(Escenario e) => new(e.Base, e.Base, e.Base, e.Base, e.Notificador);
     private static ObtenerNotasActividades NotasActividades(Escenario e) => new(e.Base, e.Base, e.Base, e.Base);
     private static ObtenerMatrizNotas Matriz(Escenario e) => new(e.Base, e.Base);
 

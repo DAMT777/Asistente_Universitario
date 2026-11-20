@@ -7,6 +7,7 @@ import { Icono, icono, conOnda } from '@/ui';
 import { useIsWide } from '@/ui/useIsWide';
 import { useVidrio } from '@/ui/tema';
 import { VentanaAsistente, type EstadoVentana } from '@/features/asistente/VentanaAsistente';
+import { CampanaNotificaciones } from '@/features/notificaciones/CampanaNotificaciones';
 
 const CLAVE_MENU = 'aula.menu';
 const CLAVE_CHAT = 'aula.chat';
@@ -69,6 +70,7 @@ export function AppShell() {
             </div>
           )}
           <div style={{ width: 38, height: 38, borderRadius: '50%', background: colors.marcaSuave, color: colors.marcaTexto, border: `1px solid ${colors.lineaMarca}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>{iniciales(u.nombre)}</div>
+          <CampanaNotificaciones estiloBoton={botonIcono} />
           <button type="button" aria-label="Asistente" aria-pressed={chat === 'abierta'} title={chat === 'abierta' ? 'Cerrar el asistente' : 'Asistente: pregúntale por notas y cursos'} onPointerDown={conOnda()} className="au-onda-host au-boton--contorno au-boton-activo" onClick={() => cambiarChat(chat === 'abierta' ? 'cerrada' : 'abierta')} style={botonIcono}>
             <Icono d={icono.asistente} tam={18} />
           </button>

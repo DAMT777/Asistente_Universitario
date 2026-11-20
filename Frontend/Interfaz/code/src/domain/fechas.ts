@@ -34,6 +34,20 @@ export function relativo(iso: string, hoy: string): string {
   return d > 0 ? `en ${d} días` : `hace ${-d} días`;
 }
 
+/** Hace cuánto pasó algo, para avisos: «Ahora», «Hace 5 min», «Hace 3 h», «Ayer», «Hace 4 días» o la fecha corta. */
+export function haceCuanto(iso: string, ahora: number = Date.now()): string {
+  const minutos = Math.floor((ahora - Date.parse(iso)) / 60_000);
+  if (!Number.isFinite(minutos)) return '';
+  if (minutos < 1) return 'Ahora';
+  if (minutos < 60) return `Hace ${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `Hace ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  if (dias === 1) return 'Ayer';
+  if (dias < 7) return `Hace ${dias} días`;
+  return fechaCorta(iso);
+}
+
 export function iniciales(nombre: string): string {
   const w = nombre.trim().split(/\s+/);
   const apellido = w.length >= 4 ? w[2] : w[1] ?? '';

@@ -1,4 +1,4 @@
-import type { Actividad, ArchivoEntrega, Calificacion, Corte, Curso, PublicacionCorte, Sesion, Usuario } from '@/types';
+import type { Actividad, ArchivoEntrega, BandejaNotificaciones, Calificacion, Corte, Curso, PublicacionCorte, Sesion, Usuario } from '@/types';
 
 /**
  * Contrato único que consumen los hooks. Hay dos implementaciones:
@@ -49,6 +49,15 @@ export interface ApiClient {
     anularEntrega(actividadId: string): Promise<void>;
     /** URL local (object URL) de un archivo de la entrega, para descargarlo con su nombre. */
     descargarArchivo(entregaId: string, archivoId: string): Promise<string>;
+  };
+  /**
+   * Avisos del usuario de la sesión (contracts/evaluaciones.yaml, /notificaciones). Los genera el servicio cuando el
+   * profesor crea o cambia algo del curso o publica una nota; un borrador nunca genera aviso.
+   */
+  notificaciones: {
+    listar(): Promise<BandejaNotificaciones>;
+    marcarLeida(id: string): Promise<void>;
+    marcarTodasLeidas(): Promise<void>;
   };
   /** Asistente IA (contracts/asistente.yaml). Nunca escribe sin confirmar: proponer solo crea una acción pendiente. */
   asistente: {

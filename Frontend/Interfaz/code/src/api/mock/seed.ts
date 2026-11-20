@@ -1,4 +1,4 @@
-import type { Actividad, Calificacion, Curso, Usuario } from '@/types';
+import type { Actividad, Calificacion, Curso, Notificacion, Usuario } from '@/types';
 
 export const CURSOS: Curso[] = [
   { id: 'sim', codigo: '603803', nombre: 'Simulación Computacional', grupo: 1, creditos: 3, periodo: '2026B', docente: 'Laura Rincón', pesos: [30, 30, 40], monograma: 'SC', acento: 'rojo' },
@@ -56,4 +56,19 @@ export function calificacionesIniciales(): Calificacion[] {
   ent('a2', 'e2', { nota: 4.3, estado: 'publicada' }); ent('a2', 'e3'); ent('a2', 'e4', { nota: 4.5, estado: 'publicada' }); ent('a2', 'e5');
   ent('s4', 'e4');
   return out.map(c => ACTIVIDADES.find(a => a.id === c.actividadId)?.requiereEntrega ? c : { ...c, entregado: null, archivo: null });
+}
+
+export type NotificacionSemilla = Notificacion & { usuarioId: string };
+
+/** Avisos con los que arranca la demostración: lo que el estudiante habría recibido antes del 1 de octubre. */
+export function notificacionesIniciales(): NotificacionSemilla[] {
+  const califs = calificacionesIniciales();
+  const out: NotificacionSemilla[] = [];
+  for (const e of ESTUDIANTES) {
+    const archimate = califs.find(c => c.estudianteId === e.id && c.actividadId === 'a2' && c.estado === 'publicada');
+    if (archimate?.nota != null) out.push({ id: `sem-a2-${e.id}`, usuarioId: e.id, tipo: 'nota_publicada', titulo: 'Nota publicada: Caso de estudio · ArchiMate', mensaje: `Arquitectura Empresarial: tu nota en «Caso de estudio · ArchiMate» es ${archimate.nota.toFixed(1)}.${archimate.retro ? ' Tiene retroalimentación del profesor.' : ''}`, cursoId: 'arq', actividadId: 'a2', fecha: '2026-09-30T20:15:00Z', leida: false });
+    out.push({ id: `sem-s5-${e.id}`, usuarioId: e.id, tipo: 'nueva_actividad', titulo: 'Nueva actividad: Proyecto final', mensaje: 'Simulación Computacional: Laura Rincón agregó «Proyecto final». Corte 3, 100% del corte. Entrega hasta el 20/11/2026 23:59.', cursoId: 'sim', actividadId: 's5', fecha: '2026-09-28T14:00:00Z', leida: false });
+    out.push({ id: `sem-pesos-${e.id}`, usuarioId: e.id, tipo: 'curso_actualizado', titulo: 'Nuevos pesos en Ética y Humanística', mensaje: 'Ética y Humanística: los cortes ahora pesan 33%, 33% y 34%.', cursoId: 'eti', actividadId: null, fecha: '2026-09-10T13:30:00Z', leida: true });
+  }
+  return out;
 }

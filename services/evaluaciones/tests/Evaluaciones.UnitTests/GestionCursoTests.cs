@@ -10,10 +10,10 @@ namespace Evaluaciones.UnitTests;
 public class GestionCursoTests
 {
     private static Task<CursoResumenDto> Pesos(Escenario e, decimal? c1, decimal? c2, decimal? c3, Guid? profesorId = null) =>
-        new DefinirPesosCortes(e.Base, e.Base).EjecutarAsync(
+        new DefinirPesosCortes(e.Base, e.Base, e.Notificador).EjecutarAsync(
             profesorId ?? Escenario.ProfesorId, Escenario.CursoId, new SolicitudPesosCortes(c1, c2, c3), default);
 
-    private static GestionarActividad Gestion(Escenario e) => new(e.Base, e.Base, e.Base, e.Reloj);
+    private static GestionarActividad Gestion(Escenario e) => new(e.Base, e.Base, e.Base, e.Reloj, e.Notificador);
 
     private static SolicitudActividad Solicitud(
         string? titulo = "Taller 2", int? corte = 3, decimal? peso = 30, int? diasParaVencer = 10, bool? requiereEntrega = true) =>
