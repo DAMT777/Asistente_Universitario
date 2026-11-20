@@ -208,6 +208,8 @@ export const icono = {
   editar: 'M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4',
   nota: 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8-4.2-4.1 5.9-.9z',
   revisado: 'M5 12.5 9.5 17 19 7.5',
+  hoja: 'M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 3v4h4M8 12h8M8 16h8M12 10v8',
+  alerta: 'M12 4 2.5 20h19zM12 10v4.5M12 17.5h.01',
 } as const;
 
 export function Icono({ d, tam = 20 }: { d: string; tam?: number }) {

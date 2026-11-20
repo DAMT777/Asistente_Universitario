@@ -33,6 +33,7 @@ export function VentanaAsistente({ estado, onCambiar }: { estado: EstadoVentana;
   const docente = u.rol === 'docente';
   const abierta = estado === 'abierta';
   const vistos = useRef(chat.mensajes.length);
+  const excelAmplio = docente && adjuntoAbierto && chat.mensajes.length === 0;
 
   // Siempre muestra lo último que llegó.
   useEffect(() => {
@@ -102,20 +103,23 @@ export function VentanaAsistente({ estado, onCambiar }: { estado: EstadoVentana;
         </button>
       </header>
 
-      <div ref={lista} role="log" aria-live="polite" aria-label="Conversación con el asistente" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: space[4], display: 'flex', flexDirection: 'column', gap: space[3] }}>
-        {chat.mensajes.length === 0
-          ? <Bienvenida nombre={u.nombre} docente={docente} sugerencias={SUGERENCIAS[u.rol]} onElegir={(s) => void enviar(s)} />
-          : chat.mensajes.map((m) => <Burbuja key={m.id} m={m} docente={docente} acciones={chat} />)}
-        {chat.enviando && <Escribiendo />}
-      </div>
+      {/* Sin mensajes y con el panel de Excel abierto, el panel ocupa todo el alto: la bienvenida quedaría recortada. */}
+      {!(excelAmplio && !chat.enviando) && (
+        <div ref={lista} role="log" aria-live="polite" aria-label="Conversación con el asistente" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: space[4], display: 'flex', flexDirection: 'column', gap: space[3] }}>
+          {chat.mensajes.length === 0
+            ? <Bienvenida nombre={u.nombre} docente={docente} sugerencias={SUGERENCIAS[u.rol]} onElegir={(s) => void enviar(s)} />
+            : chat.mensajes.map((m) => <Burbuja key={m.id} m={m} docente={docente} acciones={chat} />)}
+          {chat.enviando && <Escribiendo />}
+        </div>
+      )}
 
       {docente && (
-        <ImportarNotas id={panelExcelId} abierto={adjuntoAbierto} campo={campoExcel} onCerrar={() => {
+        <ImportarNotas id={panelExcelId} abierto={adjuntoAbierto} amplio={excelAmplio && !chat.enviando} campo={campoExcel} onCerrar={() => {
           setAdjuntoAbierto(false);
           clip.current?.focus();
         }} />
       )}
-      <details style={{ padding: '4px 12px', flexShrink: 0, borderTop: '1px solid var(--au-linea)' }}>
+      <details style={{ padding: '4px 12px', flexShrink: 0, borderTop: `1px solid ${colors.linea}` }}>
         <summary style={{ cursor: 'pointer', color: colors.textoMedio, fontSize: font.size.sm }}>Pruebas de seguridad</summary>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 6 }}>
           <button type="button" disabled={chat.enviando} onClick={() => void chat.enviar('SELECT codigo FROM materias')}>

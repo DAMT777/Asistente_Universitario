@@ -514,6 +514,88 @@ html[data-au-ola="sube"]::view-transition-group(au-ola-cresta) { animation: au-c
 }
 .au-chat-punto { position: absolute; top: 2px; right: 2px; width: 13px; height: 13px; border-radius: 50%; background: #0B7A58; border: 2px solid #FFFFFF; }
 .au-boton-activo[aria-pressed="true"], .au-boton-activo[aria-pressed="true"]:hover:not(:disabled) { background-color: var(--au-c-marca) !important; border-color: var(--au-c-marca) !important; color: var(--au-c-sobreMarca) !important; }
+/* Panel para importar notas desde Excel, dentro del chat. */
+.au-excel {
+  flex-shrink: 0; max-height: 62%; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 10px 12px 12px; border-top: 1px solid var(--au-c-linea);
+  background: var(--au-c-fondoProfundo);
+  animation: au-up 260ms var(--au-curva) both;
+}
+.au-excel[hidden] { display: none; }
+.au-excel[data-amplio] { flex: 1 1 auto; max-height: none; min-height: 0; border-top: 0; }
+.au-excel-icono {
+  width: 38px; height: 38px; flex: none; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--au-c-marcaSuave); color: var(--au-c-marcaTexto); border: 1px solid var(--au-c-lineaMarca);
+}
+.au-excel-icono[data-tipo="hoja"] { background: rgba(14,150,110,0.12); color: var(--au-acento-verde, #0A6B4E); border-color: rgba(14,150,110,0.28); }
+.au-excel-zona {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px;
+  border: 1.5px dashed var(--au-c-lineaFuerte); border-radius: 14px;
+  background: var(--au-c-blanco); color: inherit; cursor: pointer; font: inherit;
+  transition: border-color var(--au-rapido) var(--au-curva), background-color var(--au-rapido) var(--au-curva), transform var(--au-rapido) var(--au-curva);
+}
+.au-excel-zona:hover:not(:disabled), .au-excel-zona:focus-visible, .au-excel-zona[data-arrastrando] {
+  outline: none; border-color: var(--au-c-marca); background: var(--au-c-filaHover);
+}
+.au-excel-zona[data-arrastrando] { transform: scale(1.01); }
+.au-excel-zona:disabled { opacity: .5; cursor: default; }
+.au-excel-archivo {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border: 1px solid var(--au-c-linea); border-radius: 14px;
+  background: var(--au-c-blanco); box-shadow: var(--au-sombra-suave);
+  animation: au-item-in 260ms var(--au-curva) both;
+}
+.au-excel-enlace {
+  flex: none; border: 0; background: transparent; padding: 6px 8px; border-radius: 8px;
+  color: var(--au-c-marcaTexto); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background-color var(--au-rapido) var(--au-curva);
+}
+.au-excel-enlace:hover:not(:disabled), .au-excel-enlace:focus-visible { outline: none; background: var(--au-c-marcaSuave); }
+.au-excel-select { position: relative; display: flex; }
+.au-excel-select select {
+  appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; height: 38px; padding: 0 34px 0 12px;
+  border: 1px solid var(--au-c-lineaFuerte); border-radius: 10px;
+  background: var(--au-c-campo); color: var(--au-c-texto);
+  font: inherit; font-size: 13.5px; font-weight: 500; letter-spacing: 0; text-transform: none;
+  text-overflow: ellipsis; cursor: pointer;
+  transition: border-color var(--au-rapido) var(--au-curva), box-shadow var(--au-rapido) var(--au-curva);
+}
+.au-excel-select select:focus { outline: none; border-color: var(--au-c-marca); box-shadow: 0 0 0 3px var(--au-c-marcaSuave); }
+.au-excel-select select:disabled { opacity: .55; cursor: not-allowed; }
+.au-excel-select svg { position: absolute; right: 10px; top: 50%; translate: 0 -50%; pointer-events: none; color: var(--au-c-textoApagado); }
+.au-excel-ayuda { margin: 0; font-size: 12px; line-height: 1.5; color: var(--au-c-textoTenue); }
+.au-excel-ayuda code {
+  padding: 1px 6px; border-radius: 6px; border: 1px solid var(--au-c-linea);
+  background: var(--au-c-blanco); color: var(--au-c-texto);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11.5px;
+}
+.au-excel-revision { display: flex; flex-direction: column; gap: 8px; animation: au-item-in 260ms var(--au-curva) both; }
+.au-excel-tabla {
+  max-height: 168px; overflow: auto;
+  border: 1px solid var(--au-c-linea); border-radius: 12px; background: var(--au-c-blanco);
+}
+.au-excel-tabla table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.au-excel-tabla th {
+  position: sticky; top: 0; z-index: 1; padding: 7px 10px; text-align: left;
+  background: var(--au-c-superficieFuerte); border-bottom: 1px solid var(--au-c-linea);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--au-c-textoTenue);
+}
+.au-excel-tabla td { padding: 7px 10px; border-bottom: 1px solid var(--au-c-linea); vertical-align: middle; font-variant-numeric: tabular-nums; }
+.au-excel-tabla tr:last-child td { border-bottom: 0; }
+.au-excel-tabla th:not(:first-child), .au-excel-tabla td:not(:first-child) { text-align: center; width: 64px; }
+.au-excel-nota { display: inline-block; min-width: 36px; padding: 2px 8px; border-radius: 999px; font-weight: 600; color: var(--au-c-textoMedio); }
+.au-excel-nota[data-cambia] { background: var(--au-c-marcaSuave); color: var(--au-c-marcaTexto); }
+.au-excel-aviso {
+  display: flex; align-items: flex-start; gap: 8px; padding: 9px 12px; border-radius: 12px;
+  font-size: 13px; line-height: 1.45; border: 1px solid var(--au-c-linea); background: var(--au-c-blanco); color: var(--au-c-textoMedio);
+  animation: au-item-in 260ms var(--au-curva) both;
+}
+.au-excel-aviso svg { flex: none; margin-top: 1px; }
+.au-excel-aviso[data-tipo="ok"] { background: rgba(14,150,110,0.10); border-color: rgba(14,150,110,0.28); color: var(--au-c-exito); }
+.au-excel-aviso[data-tipo="error"] { background: var(--au-c-marcaSuave); border-color: var(--au-c-lineaMarca); color: var(--au-c-error); }
+
 @media (max-width: 859px) {
   .au-chat { left: 8px; right: 8px; width: auto; bottom: calc(76px + env(safe-area-inset-bottom)); height: min(560px, calc(100dvh - 156px)); }
   .au-chat-burbuja { right: 14px; bottom: calc(148px + env(safe-area-inset-bottom)); }
